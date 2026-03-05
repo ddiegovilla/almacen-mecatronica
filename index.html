@@ -985,51 +985,48 @@ function renderCombos(){
   const c = document.getElementById('combos-container');
   c.innerHTML = COMBOS.map(combo=>{
     const itemsData = combo.items.map(id=>products.find(x=>x.id===id)).filter(Boolean);
-    const allAvail  = itemsData.every(p=>p.available>0);
     const someUnavail = itemsData.some(p=>p.available===0);
+    const allOut = itemsData.every(p=>p.available===0);
     const tagsHtml = itemsData.map(p=>{
       const cls = p.available===0?' combo-tag-out':'';
       return `<span class="combo-tag${cls}">${p.emoji} ${p.name} <span style="opacity:.6;font-size:9px">(${p.available} disp.)</span></span>`;
     }).join('');
-    const warnHtml = someUnavail?`<div style="font-size:10px;color:var(--warn);margin-bottom:8px">⚠️ Algunos artículos sin stock</div>`:'';
-    const disabledAttr = allAvail?'':' disabled title="Stock insuficiente"';
+    const warnHtml = someUnavail&&!allOut ? `<div style="font-size:10px;color:var(--warn);margin-bottom:8px">⚠️ Algunos artículos sin stock</div>` : '';
+    const cid = combo.id;
     return `<div class="combo-card">
       <div class="combo-icon">${combo.emoji}</div>
       <div class="combo-name">${combo.name}</div>
       <div class="combo-desc">${combo.desc}</div>
       <div class="combo-items-list">${tagsHtml}</div>
       ${warnHtml}
-      <div style="display:flex;gap:6px;margin-top:4px">
-        <button class="btn-combo" style="flex:1" onclick="addCombo('${combo.id}')">+ Al carrito</button>
-        <button class="btn-combo btn-combo-reserve" style="flex:1"${disabledAttr} onclick="reserveCombo('${combo.id}')">⚡ Reservar ya</button>
-      </div>
+      <button class="btn-combo" style="width:100%;margin-top:8px" id="cbtn-${cid}" onclick="addCombo('${cid}')">+ Agregar al carrito</button>
     </div>`;
   }).join('');
 }
 
 function addCombo(comboId){
   const combo = COMBOS.find(c=>c.id===comboId);
-  if(!combo) return;
-  let added=0;
+  if(!combo){ showToast('Combo no encontrado','error'); return; }
+  let added = 0;
   combo.items.forEach(pid=>{
     const p = products.find(x=>x.id===pid);
-    if(p&&p.available>0&&!cart.find(c=>c.id===pid)){
-      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1}); added++;
+    if(!p || p.available===0) return;
+    const inCart = cart.find(c=>c.id===pid);
+    if(inCart){
+      // Already in cart, just increment if possible
+      if(inCart.qty < p.available){ inCart.qty++; added++; }
+    } else {
+      cart.push({id:p.id, name:p.name, cat:p.cat, emoji:p.emoji, qty:1});
+      added++;
     }
   });
-  showToast(`✅ Kit ${combo.name} agregado (${added} artículos)`,'success');
-  updateCartUI(); renderProducts(activeCategory);
-}
-
-function reserveCombo(comboId){
-  const combo = COMBOS.find(c=>c.id===comboId);
-  if(!combo) return;
-  combo.items.forEach(pid=>{
-    const p = products.find(x=>x.id===pid);
-    if(p&&p.available>0&&!cart.find(c=>c.id===pid))
-      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});
-  });
-  updateCartUI(); renderProducts(activeCategory); openReserveModal();
+  if(added===0){
+    showToast('⚠️ Todos los artículos del kit ya están en tu carrito o sin stock','error');
+  } else {
+    showToast(`✅ Kit ${combo.name} agregado — ${added} artículo${added!==1?'s':''}`, 'success');
+  }
+  updateCartUI();
+  renderProducts(activeCategory);
 }
 
 function renderCategoryFilters(){
