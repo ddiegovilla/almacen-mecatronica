@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LabMeca · Tec de Monterrey</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #070c18;
@@ -310,6 +311,26 @@ body::before{
 }
 .loans-active-dot.show{display:block}
 
+/* Admin create-loan modal */
+.admin-loan-modal .modal{max-width:600px}
+.product-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:280px;overflow-y:auto;margin:12px 0;padding:4px}
+.picker-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;cursor:pointer;transition:all .2s;position:relative}
+.picker-card:hover{border-color:rgba(0,194,255,.4)}
+.picker-card.selected{border-color:var(--accent);background:rgba(0,194,255,.08)}
+.picker-card.unavail{opacity:.35;pointer-events:none}
+.picker-emoji{font-size:22px;margin-bottom:4px}
+.picker-name{font-size:11px;font-weight:600;line-height:1.3}
+.picker-avail{font-size:10px;color:var(--muted);margin-top:3px}
+.picker-check{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:none;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:700}
+.picker-card.selected .picker-check{display:flex}
+.selected-items-list{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;padding:8px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);margin-bottom:12px}
+.sel-chip{display:flex;align-items:center;gap:5px;background:rgba(0,194,255,.1);border:1px solid rgba(0,194,255,.2);border-radius:6px;padding:4px 8px;font-size:12px}
+.sel-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px}
+.sel-chip button:hover{color:var(--danger)}
+.user-select-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap}
+.user-select-row .form-group{flex:1;min-width:180px;margin-bottom:0}
+.picker-search{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:9px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;margin-bottom:10px}
+.picker-search:focus{border-color:var(--accent)}
 /* Toast */
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
@@ -447,6 +468,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </style>
 </head>
 <body>
+
+<!-- ===== LOADER ===== -->
+<div id="view-loader" class="view" style="display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px">
+  <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div id="loader-msg" style="font-size:14px;color:var(--muted);letter-spacing:.5px">Cargando...</div>
+</div>
+<style>
+#view-loader.active{display:flex!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 
 <!-- ===== LOGIN ===== -->
 <div id="view-login" class="view">
@@ -613,7 +644,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- Loans panel -->
     <div class="admin-panel active" id="panel-loans">
       <div class="table-controls">
-        <span style="font-size:13px;color:var(--muted)">Préstamos pendientes de devolución</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">Préstamos pendientes de devolución</span>
+          <button class="btn-sm btn-edit" onclick="openAdminLoanModal()" style="padding:7px 16px;font-size:12px">+ Nuevo Préstamo</button>
+        </div>
         <input class="search-input" placeholder="🔍 Buscar alumno..." oninput="renderLoansTable(this.value)">
       </div>
       <div class="table-wrap"><table id="loans-table">
@@ -624,7 +658,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- History panel -->
     <div class="admin-panel" id="panel-history">
       <div class="table-controls">
-        <span style="font-size:13px;color:var(--muted)">Historial completo de préstamos</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">Historial completo de préstamos</span>
+          <button class="btn-sm btn-edit" onclick="exportToExcel()" style="padding:7px 16px;font-size:12px">📥 Exportar Excel</button>
+        </div>
         <input class="search-input" placeholder="🔍 Buscar..." oninput="renderHistoryTable(this.value)">
       </div>
       <div class="table-wrap"><table>
@@ -654,28 +691,76 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- ===== ADMIN CREATE LOAN MODAL ===== -->
+<div class="modal-overlay admin-loan-modal" id="admin-loan-modal">
+  <div class="modal" style="max-width:640px;width:100%">
+    <div class="modal-head">
+      <h3>➕ Nuevo Préstamo Manual</h3>
+      <button class="modal-close" onclick="closeModal('admin-loan-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+      <!-- User select -->
+      <div class="user-select-row">
+        <div class="form-group">
+          <label>Seleccionar Alumno</label>
+          <select id="admin-loan-user" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none">
+            <option value="">— Elige un alumno —</option>
+          </select>
+        </div>
+      </div>
+      <!-- Info preview -->
+      <div id="admin-loan-user-info" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:14px;font-size:12px;color:var(--muted)"></div>
+      <!-- Selected items -->
+      <label style="font-size:12px;font-weight:600;letter-spacing:.8px;color:var(--muted);text-transform:uppercase">Materiales Seleccionados</label>
+      <div class="selected-items-list" id="admin-selected-items"><span style="color:var(--muted);font-size:12px">Ningún material seleccionado aún...</span></div>
+      <!-- Product picker -->
+      <label style="font-size:12px;font-weight:600;letter-spacing:.8px;color:var(--muted);text-transform:uppercase">Buscar Material</label>
+      <input class="picker-search" id="picker-search" placeholder="🔍 Escribe para filtrar..." oninput="renderPicker(this.value)">
+      <div class="product-picker" id="product-picker"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" style="width:auto;padding:10px 20px" onclick="closeModal('admin-loan-modal')">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;padding:10px 24px" onclick="confirmAdminLoan()">✓ Registrar Préstamo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase compat CDN -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script>
-// ============================
-// DATA
-// ============================
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBww1HlRe4fuULqyyCo6uHxfC8DlL0Gv-o",
+  authDomain: "labmeca-1e214.firebaseapp.com",
+  projectId: "labmeca-1e214",
+  storageBucket: "labmeca-1e214.firebasestorage.app",
+  messagingSenderId: "408282550013",
+  appId: "1:408282550013:web:b861daeb15ce62b311b894"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ============================================================
+// CONSTANTS
+// ============================================================
 const ADMIN_PASSWORD = 'mecatronica2024';
 
 const INITIAL_PRODUCTS = [
-  // EPP
   {id:'p01',name:'Guantes de seguridad',cat:'EPP',qty:5,emoji:'🧤',bg:'#1a2a3a'},
   {id:'p02',name:'Guantes de nitrilo',cat:'EPP',qty:5,emoji:'🧤',bg:'#1a2a3a'},
   {id:'p03',name:'Goggles de seguridad',cat:'EPP',qty:4,emoji:'🥽',bg:'#1a2a3a'},
   {id:'p04',name:'Lentes de seguridad',cat:'EPP',qty:4,emoji:'🥽',bg:'#1a2a3a'},
-  // Instrumentos Básicos
   {id:'p05',name:'Cables banana',cat:'Instrumentos',qty:10,emoji:'🔌',bg:'#1a2a1a'},
   {id:'p06',name:'Cables caimán',cat:'Instrumentos',qty:8,emoji:'🐊',bg:'#1a2a1a'},
   {id:'p07',name:'Jumpers',cat:'Instrumentos',qty:20,emoji:'🔗',bg:'#1a2a1a'},
   {id:'p08',name:'Multímetro',cat:'Instrumentos',qty:5,emoji:'📊',bg:'#1a2a1a'},
-  // Para Cortes
   {id:'p09',name:'Prensas de mesa',cat:'Cortes',qty:4,emoji:'🗜️',bg:'#2a1a1a'},
   {id:'p10',name:'Regla L',cat:'Cortes',qty:5,emoji:'📐',bg:'#2a1a1a'},
   {id:'p11',name:'Plumón',cat:'Cortes',qty:8,emoji:'✏️',bg:'#2a1a1a'},
-  // Taladrado
   {id:'p12',name:'Taladro',cat:'Taladrado',qty:3,emoji:'🔨',bg:'#1a1a2a'},
   {id:'p13',name:'Broca MM',cat:'Taladrado',qty:6,emoji:'🔩',bg:'#1a1a2a'},
   {id:'p14',name:'Broca STD',cat:'Taladrado',qty:6,emoji:'🔩',bg:'#1a1a2a'},
@@ -683,27 +768,21 @@ const INITIAL_PRODUCTS = [
   {id:'p16',name:'Broca GUIA',cat:'Taladrado',qty:4,emoji:'🔩',bg:'#1a1a2a'},
   {id:'p17',name:'Punta de cruz',cat:'Taladrado',qty:8,emoji:'✝️',bg:'#1a1a2a'},
   {id:'p18',name:'Punta plana',cat:'Taladrado',qty:8,emoji:'➖',bg:'#1a1a2a'},
-  // Soldadura
   {id:'p19',name:'Cautín',cat:'Soldadura',qty:4,emoji:'🔥',bg:'#2a1a0a'},
   {id:'p20',name:'Estaño',cat:'Soldadura',qty:5,emoji:'🧵',bg:'#2a1a0a'},
   {id:'p21',name:'Pasta para soldar',cat:'Soldadura',qty:5,emoji:'🧴',bg:'#2a1a0a'},
   {id:'p22',name:'Soporte para cautín',cat:'Soldadura',qty:4,emoji:'🏷️',bg:'#2a1a0a'},
   {id:'p23',name:'Atril',cat:'Soldadura',qty:3,emoji:'📌',bg:'#2a1a0a'},
-  // Instrumentos A
   {id:'p24',name:'Fuente de poder',cat:'Instrumentos A',qty:4,emoji:'⚡',bg:'#0a1a2a'},
   {id:'p25',name:'Cable de alimentación',cat:'Instrumentos A',qty:4,emoji:'🔌',bg:'#0a1a2a'},
   {id:'p26',name:'Cables banana-caimán',cat:'Instrumentos A',qty:8,emoji:'🔌',bg:'#0a1a2a'},
-  // Instrumentos B
   {id:'p27',name:'Osciloscopio',cat:'Instrumentos B',qty:3,emoji:'📺',bg:'#0a2a1a'},
   {id:'p28',name:'Cable sonda osciloscopio',cat:'Instrumentos B',qty:6,emoji:'🔌',bg:'#0a2a1a'},
-  // Instrumentos C
   {id:'p29',name:'Generador de funciones',cat:'Instrumentos C',qty:2,emoji:'📡',bg:'#1a0a2a'},
   {id:'p30',name:'Cable generador',cat:'Instrumentos C',qty:4,emoji:'🔌',bg:'#1a0a2a'},
-  // Cortes avanzados
   {id:'p31',name:'Caladora',cat:'Cortes',qty:2,emoji:'🪚',bg:'#2a1a1a'},
   {id:'p32',name:'Segueta',cat:'Cortes',qty:3,emoji:'🪚',bg:'#2a1a1a'},
   {id:'p33',name:'Serrucho',cat:'Cortes',qty:2,emoji:'🪚',bg:'#2a1a1a'},
-  // Adhesivos
   {id:'p34',name:'Cinta de aislar',cat:'Adhesivos',qty:8,emoji:'🎗️',bg:'#2a2a0a'},
   {id:'p35',name:'Cinta transparente',cat:'Adhesivos',qty:8,emoji:'🎗️',bg:'#2a2a0a'},
   {id:'p36',name:'Cinta masking tape',cat:'Adhesivos',qty:6,emoji:'🎗️',bg:'#2a2a0a'},
@@ -714,12 +793,10 @@ const INITIAL_PRODUCTS = [
   {id:'p41',name:'Resistol 850',cat:'Adhesivos',qty:4,emoji:'💛',bg:'#2a2a0a'},
   {id:'p42',name:'Resistol 950',cat:'Adhesivos',qty:4,emoji:'🟡',bg:'#2a2a0a'},
   {id:'p43',name:'Pistola de silicón',cat:'Adhesivos',qty:3,emoji:'🔫',bg:'#2a2a0a'},
-  // Medición
   {id:'p44',name:'Flexómetro',cat:'Medición',qty:5,emoji:'📏',bg:'#0a2a2a'},
   {id:'p45',name:'Escuadra',cat:'Medición',qty:4,emoji:'📐',bg:'#0a2a2a'},
   {id:'p46',name:'Nivel',cat:'Medición',qty:3,emoji:'🔲',bg:'#0a2a2a'},
   {id:'p47',name:'Vernier',cat:'Medición',qty:4,emoji:'🔭',bg:'#0a2a2a'},
-  // Operaciones mecánicas
   {id:'p48',name:'Desarmador',cat:'Mecánica',qty:8,emoji:'🔧',bg:'#2a0a1a'},
   {id:'p49',name:'Rotomartillo',cat:'Mecánica',qty:2,emoji:'🔨',bg:'#2a0a1a'},
   {id:'p50',name:'Llaves Allen',cat:'Mecánica',qty:5,emoji:'🔑',bg:'#2a0a1a'},
@@ -728,7 +805,6 @@ const INITIAL_PRODUCTS = [
   {id:'p53',name:'Pinzas de presión',cat:'Mecánica',qty:4,emoji:'🦾',bg:'#2a0a1a'},
   {id:'p54',name:'Pinzas de electricista',cat:'Mecánica',qty:4,emoji:'⚡',bg:'#2a0a1a'},
   {id:'p55',name:'Llaves mecánicas',cat:'Mecánica',qty:4,emoji:'🔑',bg:'#2a0a1a'},
-  // Maquinados
   {id:'p56',name:'Llaves para taladros',cat:'Maquinados',qty:3,emoji:'🔑',bg:'#1a0a2a'},
   {id:'p57',name:'Llaves para fresa',cat:'Maquinados',qty:3,emoji:'🔑',bg:'#1a0a2a'},
   {id:'p58',name:'Endmill',cat:'Maquinados',qty:5,emoji:'⚙️',bg:'#1a0a2a'},
@@ -745,49 +821,118 @@ const COMBOS = [
   {id:'c8',name:'Kit Mecánico',emoji:'🔧',desc:'Operaciones mecánicas generales',items:['p48','p50','p51','p55']},
 ];
 
-// ============================
-// STATE & LOCALSTORAGE
-// ============================
-let products = JSON.parse(localStorage.getItem('lm_products') || 'null') || INITIAL_PRODUCTS.map(p=>({...p,available:p.qty}));
-let users = JSON.parse(localStorage.getItem('lm_users') || '[]');
-let loans = JSON.parse(localStorage.getItem('lm_loans') || '[]');
+// ============================================================
+// STATE  (in-memory cache of Firestore data)
+// ============================================================
+let products  = [];
+let users     = [];
+let loans     = [];
 let currentUser = JSON.parse(localStorage.getItem('lm_current') || 'null');
-let isAdmin = localStorage.getItem('lm_admin') === '1';
-let cart = [];
+let isAdmin   = localStorage.getItem('lm_admin') === '1';
+let cart      = [];
+let adminCart = [];
+let activeCategory = 'Todos';
 
-function save(){
-  localStorage.setItem('lm_products', JSON.stringify(products));
-  localStorage.setItem('lm_users', JSON.stringify(users));
-  localStorage.setItem('lm_loans', JSON.stringify(loans));
+// ============================================================
+// HELPERS
+// ============================================================
+function nowStamp(){
+  const d = new Date();
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})
+    + ' ' + d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
 }
-
-// ============================
-// VIEWS
-// ============================
+function showLoader(msg='Cargando...'){
+  document.getElementById('loader-msg').textContent = msg;
+  document.getElementById('view-loader').classList.add('active');
+}
+function hideLoader(){
+  document.getElementById('view-loader').classList.remove('active');
+}
+function showToast(msg, type='info'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+name).classList.add('active');
+  const el = document.getElementById('view-'+name);
+  if(el) el.classList.add('active');
 }
 
-function doLogin(){
+// ============================================================
+// FIRESTORE: SEED PRODUCTS (first time only)
+// ============================================================
+async function loadProducts(){
+  const snap = await db.collection('products').get();
+  if(snap.empty){
+    // Seed initial products
+    const batch = db.batch();
+    INITIAL_PRODUCTS.forEach(p=>{
+      const ref = db.collection('products').doc(p.id);
+      batch.set(ref, {...p, available: p.qty});
+    });
+    await batch.commit();
+    products = INITIAL_PRODUCTS.map(p=>({...p, available:p.qty}));
+  } else {
+    products = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }
+}
+
+async function loadUsers(){
+  const snap = await db.collection('users').get();
+  users = snap.docs.map(d=>({id:d.id,...d.data()}));
+  // Seed 2 test users if none exist
+  if(users.length===0){
+    const testUsers = [
+      {matricula:'A01111111',nombre:'Carlos Ramírez Vega',correo:'a01111111@tec.mx',clase:'Mecatrónica 3',maestro:'Dr. López',createdAt:nowStamp()},
+      {matricula:'A02222222',nombre:'Sofía Torres Mendoza',correo:'a02222222@tec.mx',clase:'Robótica Aplicada',maestro:'Dra. García',createdAt:nowStamp()},
+    ];
+    const batch = db.batch();
+    testUsers.forEach(u=>{
+      batch.set(db.collection('users').doc(u.matricula), u);
+    });
+    await batch.commit();
+    users = testUsers;
+  }
+}
+
+async function loadLoans(){
+  const snap = await db.collection('loans').orderBy('date','asc').get();
+  loans = snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
+// ============================================================
+// VIEWS: AUTH
+// ============================================================
+async function doLogin(){
   const mat = document.getElementById('login-mat').value.trim().toUpperCase();
   const err = document.getElementById('login-error');
-  const user = users.find(u=>u.matricula.toUpperCase()===mat);
-  if(!user){err.style.display='block';return;}
+  if(!mat){err.style.display='block';err.textContent='Ingresa tu matrícula';return;}
+  showLoader('Verificando...');
+  const doc = await db.collection('users').doc(mat).get();
+  hideLoader();
+  if(!doc.exists){err.style.display='block';err.textContent='Matrícula no encontrada. ¿Ya tienes cuenta?';return;}
   err.style.display='none';
-  currentUser = user;
-  localStorage.setItem('lm_current', JSON.stringify(user));
+  currentUser = {id:doc.id,...doc.data()};
+  localStorage.setItem('lm_current', JSON.stringify(currentUser));
+  await loadLoans();
   initStore();
   showView('store');
 }
 
-function doAdminLogin(){
+async function doAdminLogin(){
   const pass = document.getElementById('admin-pass').value;
-  const err = document.getElementById('admin-error');
+  const err  = document.getElementById('admin-error');
   if(pass !== ADMIN_PASSWORD){err.style.display='block';return;}
   err.style.display='none';
   isAdmin = true;
   localStorage.setItem('lm_admin','1');
+  showLoader('Cargando panel admin...');
+  await loadLoans();
+  await loadUsers();
+  hideLoader();
   initAdmin();
   showView('admin');
 }
@@ -797,35 +942,35 @@ function toggleAdminField(){
   f.style.display = f.style.display==='block' ? 'none' : 'block';
 }
 
-function doRegister(){
-  const nombre = document.getElementById('reg-nombre').value.trim();
-  const mat = document.getElementById('reg-mat').value.trim().toUpperCase();
-  const correo = document.getElementById('reg-correo').value.trim();
-  const clase = document.getElementById('reg-clase').value.trim();
+async function doRegister(){
+  const nombre  = document.getElementById('reg-nombre').value.trim();
+  const mat     = document.getElementById('reg-mat').value.trim().toUpperCase();
+  const correo  = document.getElementById('reg-correo').value.trim();
+  const clase   = document.getElementById('reg-clase').value.trim();
   const maestro = document.getElementById('reg-maestro').value.trim();
   const err = document.getElementById('reg-error');
   if(!nombre||!mat||!correo||!clase||!maestro){err.textContent='Por favor completa todos los campos';err.style.display='block';return;}
-  if(users.find(u=>u.matricula===mat)){err.textContent='Esa matrícula ya está registrada';err.style.display='block';return;}
-  const user = {matricula:mat,nombre,correo,clase,maestro,createdAt:new Date().toLocaleDateString('es-MX')};
-  users.push(user);
-  save();
+  showLoader('Creando cuenta...');
+  const existing = await db.collection('users').doc(mat).get();
+  if(existing.exists){hideLoader();err.textContent='Esa matrícula ya está registrada';err.style.display='block';return;}
+  const user = {matricula:mat,nombre,correo,clase,maestro,createdAt:nowStamp()};
+  await db.collection('users').doc(mat).set(user);
+  hideLoader();
   err.style.display='none';
   showToast('✅ ¡Cuenta creada! Ya puedes iniciar sesión','success');
   setTimeout(()=>showView('login'),1200);
 }
 
 function doLogout(){
-  currentUser=null; isAdmin=false; cart=[];
+  currentUser=null; isAdmin=false; cart=[]; adminCart=[];
   localStorage.removeItem('lm_current');
   localStorage.removeItem('lm_admin');
   showView('login');
 }
 
-// ============================
+// ============================================================
 // STORE
-// ============================
-let activeCategory = 'Todos';
-
+// ============================================================
 function initStore(){
   const u = currentUser;
   document.getElementById('user-avatar').textContent = u.nombre[0].toUpperCase();
@@ -840,26 +985,40 @@ function renderCombos(){
   const c = document.getElementById('combos-container');
   c.innerHTML = COMBOS.map(combo=>{
     const itemsData = combo.items.map(id=>products.find(x=>x.id===id)).filter(Boolean);
-    const allAvail = itemsData.every(p=>p.available>0);
+    const allAvail  = itemsData.every(p=>p.available>0);
     const someUnavail = itemsData.some(p=>p.available===0);
     const tagsHtml = itemsData.map(p=>{
-      const outCls = p.available===0?' combo-tag-out':'';
-      return '<span class="combo-tag'+outCls+'">'+p.emoji+' '+p.name+' <span style="opacity:.6;font-size:9px">('+p.available+' disp.)</span></span>';
+      const cls = p.available===0?' combo-tag-out':'';
+      return `<span class="combo-tag${cls}">${p.emoji} ${p.name} <span style="opacity:.6;font-size:9px">(${p.available} disp.)</span></span>`;
     }).join('');
-    const warnHtml = someUnavail ? '<div style="font-size:10px;color:var(--warn);margin-bottom:8px">⚠️ Algunos artículos sin stock</div>' : '';
-    const disabledAttr = allAvail ? '' : ' disabled title="Stock insuficiente"';
-    return '<div class="combo-card">'
-      +'<div class="combo-icon">'+combo.emoji+'</div>'
-      +'<div class="combo-name">'+combo.name+'</div>'
-      +'<div class="combo-desc">'+combo.desc+'</div>'
-      +'<div class="combo-items-list">'+tagsHtml+'</div>'
-      +warnHtml
-      +'<div style="display:flex;gap:6px;margin-top:4px">'
-      +'<button class="btn-combo" style="flex:1" onclick="addCombo(\''+combo.id+'\')">+ Al carrito</button>'
-      +'<button class="btn-combo btn-combo-reserve" style="flex:1"'+disabledAttr+' onclick="reserveCombo(\''+combo.id+'\')">⚡ Reservar ya</button>'
-      +'</div>'
-      +'</div>';
+    const warnHtml = someUnavail?`<div style="font-size:10px;color:var(--warn);margin-bottom:8px">⚠️ Algunos artículos sin stock</div>`:'';
+    const disabledAttr = allAvail?'':' disabled title="Stock insuficiente"';
+    return `<div class="combo-card">
+      <div class="combo-icon">${combo.emoji}</div>
+      <div class="combo-name">${combo.name}</div>
+      <div class="combo-desc">${combo.desc}</div>
+      <div class="combo-items-list">${tagsHtml}</div>
+      ${warnHtml}
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button class="btn-combo" style="flex:1" onclick="addCombo('${combo.id}')">+ Al carrito</button>
+        <button class="btn-combo btn-combo-reserve" style="flex:1"${disabledAttr} onclick="reserveCombo('${combo.id}')">⚡ Reservar ya</button>
+      </div>
+    </div>`;
   }).join('');
+}
+
+function addCombo(comboId){
+  const combo = COMBOS.find(c=>c.id===comboId);
+  if(!combo) return;
+  let added=0;
+  combo.items.forEach(pid=>{
+    const p = products.find(x=>x.id===pid);
+    if(p&&p.available>0&&!cart.find(c=>c.id===pid)){
+      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1}); added++;
+    }
+  });
+  showToast(`✅ Kit ${combo.name} agregado (${added} artículos)`,'success');
+  updateCartUI(); renderProducts(activeCategory);
 }
 
 function reserveCombo(comboId){
@@ -867,13 +1026,10 @@ function reserveCombo(comboId){
   if(!combo) return;
   combo.items.forEach(pid=>{
     const p = products.find(x=>x.id===pid);
-    if(p && p.available>0 && !cart.find(c=>c.id===pid)){
+    if(p&&p.available>0&&!cart.find(c=>c.id===pid))
       cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});
-    }
   });
-  updateCartUI();
-  renderProducts(activeCategory);
-  openReserveModal();
+  updateCartUI(); renderProducts(activeCategory); openReserveModal();
 }
 
 function renderCategoryFilters(){
@@ -882,11 +1038,9 @@ function renderCategoryFilters(){
   f.innerHTML = cats.map(c=>`<button class="cat-btn${c==='Todos'?' active':''}" onclick="filterCat('${c}',this)">${c}</button>`).join('');
 }
 
-function filterCat(cat, btn){
+function filterCat(cat,btn){
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  activeCategory = cat;
-  renderProducts(cat);
+  btn.classList.add('active'); activeCategory=cat; renderProducts(cat);
 }
 
 function renderProducts(cat){
@@ -894,14 +1048,12 @@ function renderProducts(cat){
   const grid = document.getElementById('products-grid');
   grid.innerHTML = filtered.map(p=>{
     const inCart = cart.find(c=>c.id===p.id);
-    const avail = p.available;
+    const avail  = p.available;
     let qtyLabel = `<span class="qty-badge">${avail} disp.</span>`;
-    if(avail===0) qtyLabel=`<span class="qty-badge out">Agotado</span>`;
+    if(avail===0)  qtyLabel=`<span class="qty-badge out">Agotado</span>`;
     else if(avail<=2) qtyLabel=`<span class="qty-badge low">${avail} disp.</span>`;
     return `<div class="product-card${avail===0?' out-of-stock':''}">
-      <div class="product-img" style="background:${p.bg}">
-        ${p.emoji}${qtyLabel}
-      </div>
+      <div class="product-img" style="background:${p.bg}">${p.emoji}${qtyLabel}</div>
       <div class="product-body">
         <div class="product-cat">${p.cat}</div>
         <div class="product-name">${p.name}</div>
@@ -919,24 +1071,7 @@ function toggleCartItem(id){
   const idx = cart.findIndex(c=>c.id===id);
   if(idx>-1){cart.splice(idx,1);showToast('Removido del carrito','info');}
   else{cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});showToast(`${p.emoji} Agregado al carrito`,'success');}
-  updateCartUI();
-  renderProducts(activeCategory);
-}
-
-function addCombo(comboId){
-  const combo = COMBOS.find(c=>c.id===comboId);
-  if(!combo) return;
-  let added = 0;
-  combo.items.forEach(pid=>{
-    const p = products.find(x=>x.id===pid);
-    if(p && p.available>0 && !cart.find(c=>c.id===pid)){
-      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});
-      added++;
-    }
-  });
-  showToast(`✅ Kit ${combo.name} agregado (${added} artículos)`,'success');
-  updateCartUI();
-  renderProducts(activeCategory);
+  updateCartUI(); renderProducts(activeCategory);
 }
 
 function updateCartUI(){
@@ -952,14 +1087,12 @@ function renderCartItems(){
   const list = document.getElementById('cart-items-list');
   if(cart.length===0){
     list.innerHTML='<div class="cart-empty"><div class="empty-icon">📭</div><p>Tu carrito está vacío</p></div>';
-    document.getElementById('cart-total-items').textContent='0';
-    return;
+    document.getElementById('cart-total-items').textContent='0'; return;
   }
   list.innerHTML = cart.map(item=>{
-    const prod = products.find(p=>p.id===item.id);
+    const prod  = products.find(p=>p.id===item.id);
     const atMax = item.qty >= prod.available;
-    return `
-    <div class="cart-item">
+    return `<div class="cart-item">
       <div class="cart-item-icon">${item.emoji}</div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
@@ -967,33 +1100,28 @@ function renderCartItems(){
         <div class="cart-item-qty">
           <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
           <span class="qty-num">${item.qty}</span>
-          <button class="qty-btn${atMax?' qty-btn-max':''}" onclick="changeQty('${item.id}',1)" title="${atMax?'Máximo disponible':''}">+</button>
+          <button class="qty-btn${atMax?' qty-btn-max':''}" onclick="changeQty('${item.id}',1)">+</button>
           <span style="font-size:10px;color:${atMax?'var(--warn)':'var(--muted)'}">/ ${prod.available}</span>
         </div>
       </div>
       <button class="cart-remove" onclick="removeFromCart('${item.id}')">🗑️</button>
-    </div>`}).join('');
+    </div>`;
+  }).join('');
   document.getElementById('cart-total-items').textContent = cart.reduce((s,i)=>s+i.qty,0);
 }
 
-function changeQty(id, delta){
+function changeQty(id,delta){
   const item = cart.find(c=>c.id===id);
   const prod = products.find(p=>p.id===id);
   if(!item) return;
-  const newQty = item.qty + delta;
-  if(newQty > prod.available){
-    showToast(`⚠️ Solo hay ${prod.available} disponible${prod.available!==1?'s':''} de "${prod.name}"`, 'error');
-    return;
-  }
-  if(newQty < 1) return;
-  item.qty = newQty;
-  updateCartUI();
+  const nq = item.qty+delta;
+  if(nq>prod.available){showToast(`⚠️ Solo hay ${prod.available} disponible${prod.available!==1?'s':''}`,'error');return;}
+  if(nq<1) return;
+  item.qty=nq; updateCartUI();
 }
 
 function removeFromCart(id){
-  cart = cart.filter(c=>c.id!==id);
-  updateCartUI();
-  renderProducts(activeCategory);
+  cart=cart.filter(c=>c.id!==id); updateCartUI(); renderProducts(activeCategory);
 }
 
 function openCart(){
@@ -1006,80 +1134,109 @@ function closeCart(){
   document.getElementById('cart-sidebar').classList.remove('open');
 }
 
-// ============================
+// ============================================================
+// LOANS SIDEBAR (USER)
+// ============================================================
+function openLoans(){
+  renderLoansBody();
+  document.getElementById('loans-overlay').classList.add('open');
+  document.getElementById('loans-sidebar').classList.add('open');
+}
+function closeLoans(){
+  document.getElementById('loans-overlay').classList.remove('open');
+  document.getElementById('loans-sidebar').classList.remove('open');
+}
+function renderLoansBody(){
+  const myLoans = loans.filter(l=>l.userId===currentUser.matricula);
+  const body = document.getElementById('loans-body');
+  if(myLoans.length===0){
+    body.innerHTML=`<div class="loans-empty"><div class="empty-icon">📭</div><p>Aún no tienes préstamos registrados</p></div>`;return;
+  }
+  body.innerHTML = [...myLoans].reverse().map(l=>{
+    const isActive = l.status==='prestado';
+    return `<div class="loan-card">
+      <div class="loan-card-head">
+        <span class="status-badge status-${l.status}">● ${isActive?'Prestado':'Devuelto'}</span>
+        <span class="loan-date">📅 ${l.date}</span>
+      </div>
+      <div class="loan-items-grid">
+        ${l.items.map(i=>`<div class="loan-item-chip">${i.emoji} ${i.name} <span>×${i.qty}</span></div>`).join('')}
+      </div>
+      <div class="loan-footer-row">
+        <span class="loan-id">ID: ${l.id}</span>
+        ${isActive
+          ?`<span style="font-size:11px;color:var(--warn)">⏳ Pendiente de devolución</span>`
+          :`<span style="font-size:11px;color:var(--success)">✓ Devuelto el ${l.returnDate}</span>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateLoansDot(){
+  const active = loans.filter(l=>l.userId===currentUser?.matricula&&l.status==='prestado').length;
+  document.getElementById('loans-dot')?.classList.toggle('show', active>0);
+}
+
+// ============================================================
 // RESERVE
-// ============================
+// ============================================================
 function openReserveModal(){
   const list = document.getElementById('confirm-items-list');
   list.innerHTML = cart.map(i=>`<div class="confirm-item"><span>${i.emoji} ${i.name}</span><span>×${i.qty}</span></div>`).join('');
   document.getElementById('reserve-modal').classList.add('open');
 }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
-function closeModal(id){
-  document.getElementById(id).classList.remove('open');
-}
-
-function nowStamp(){
-  const d = new Date();
-  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})
-    + ' ' + d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
-}
-
-function confirmReserve(){
+async function confirmReserve(){
+  showLoader('Guardando reserva...');
+  const loanId = 'L'+Date.now();
   const loan = {
-    id: 'L'+Date.now(),
-    userId: currentUser.matricula,
-    userName: currentUser.nombre,
-    correo: currentUser.correo,
-    clase: currentUser.clase,
-    maestro: currentUser.maestro,
-    items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
-    date: nowStamp(),
-    status: 'prestado',
-    returnDate: null
+    id:loanId, userId:currentUser.matricula, userName:currentUser.nombre,
+    correo:currentUser.correo, clase:currentUser.clase, maestro:currentUser.maestro,
+    items:cart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
+    date:nowStamp(), status:'prestado', returnDate:null, createdByAdmin:false
   };
-  // Reduce available
+  // Batch: save loan + update product availability
+  const batch = db.batch();
+  batch.set(db.collection('loans').doc(loanId), loan);
   cart.forEach(i=>{
     const p = products.find(x=>x.id===i.id);
-    if(p) p.available = Math.max(0, p.available-i.qty);
+    if(p){
+      const newAvail = Math.max(0, p.available-i.qty);
+      batch.update(db.collection('products').doc(p.id), {available:newAvail});
+      p.available = newAvail;
+    }
   });
+  await batch.commit();
   loans.push(loan);
-  cart = [];
-  save();
-  closeModal('reserve-modal');
-  closeCart();
-  updateCartUI();
-  renderProducts(activeCategory);
-  updateLoansDot();
+  cart=[];
+  hideLoader();
+  closeModal('reserve-modal'); closeCart();
+  updateCartUI(); renderProducts(activeCategory); updateLoansDot();
   showToast('🎉 ¡Reserva confirmada! Pasa al almacén A7-236','success');
 }
 
-// ============================
+// ============================================================
 // ADMIN
-// ============================
+// ============================================================
 function initAdmin(){
-  renderAdminStats();
-  renderLoansTable();
-  renderHistoryTable();
-  renderInventoryGrid();
-  renderUsersGrid();
+  renderAdminStats(); renderLoansTable(); renderHistoryTable();
+  renderInventoryGrid(); renderUsersGrid();
 }
 
 function renderAdminStats(){
-  const total = products.reduce((s,p)=>s+p.qty,0);
-  const active = loans.filter(l=>l.status==='prestado').length;
-  const returned = loans.filter(l=>l.status==='devuelto').length;
-  const totalUsers = users.length;
+  const total   = products.reduce((s,p)=>s+p.qty,0);
+  const active  = loans.filter(l=>l.status==='prestado').length;
+  const returned= loans.filter(l=>l.status==='devuelto').length;
   document.getElementById('admin-stats').innerHTML = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total Artículos</div></div>
     <div class="stat-card"><div class="stat-num warn">${active}</div><div class="stat-label">Préstamos Activos</div></div>
     <div class="stat-card"><div class="stat-num green">${returned}</div><div class="stat-label">Devueltos</div></div>
-    <div class="stat-card"><div class="stat-num">${totalUsers}</div><div class="stat-label">Alumnos Registrados</div></div>
-  `;
+    <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Alumnos Registrados</div></div>`;
 }
 
 function renderLoansTable(search=''){
-  const active = loans.filter(l=>l.status==='prestado');
+  const active   = loans.filter(l=>l.status==='prestado');
   const filtered = search ? active.filter(l=>l.userName.toLowerCase().includes(search.toLowerCase())||l.userId.toLowerCase().includes(search.toLowerCase())) : active;
   const tbody = document.getElementById('loans-tbody');
   if(filtered.length===0){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No hay préstamos activos</td></tr>`;return;}
@@ -1103,7 +1260,7 @@ function renderHistoryTable(search=''){
     <td><span class="highlight">${l.userId}</span></td>
     <td style="color:var(--muted);font-size:11px">${l.correo}</td>
     <td style="color:var(--muted)">${l.maestro}</td>
-    <td>${l.items.map(i=>`${i.emoji}${i.name}`).join(', ')}</td>
+    <td>${l.items.map(i=>`${i.emoji} ${i.name}`).join(', ')}</td>
     <td style="color:var(--muted)">${l.date}</td>
     <td style="color:var(--muted)">${l.returnDate||'—'}</td>
     <td><span class="status-badge status-${l.status}">● ${l.status==='prestado'?'Prestado':'Devuelto'}</span></td>
@@ -1120,7 +1277,7 @@ function renderInventoryGrid(){
         <div class="inv-name">${p.name}</div>
         <div class="inv-cat">${p.cat}</div>
         <div class="inv-qty-row">
-          <input class="inv-qty-input" type="number" min="0" value="${p.qty}" data-id="${p.id}" data-field="qty">
+          <input class="inv-qty-input" type="number" min="0" value="${p.qty}" data-id="${p.id}">
           <span class="inv-total">total</span>
         </div>
         <div class="inv-avail ${cls}">Disponibles: ${p.available}</div>
@@ -1129,21 +1286,24 @@ function renderInventoryGrid(){
   }).join('');
 }
 
-function saveInventory(){
+async function saveInventory(){
+  showLoader('Guardando inventario...');
+  const batch = db.batch();
   document.querySelectorAll('.inv-qty-input').forEach(input=>{
-    const id = input.getAttribute('data-id');
+    const id  = input.getAttribute('data-id');
     const val = parseInt(input.value)||0;
-    const p = products.find(x=>x.id===id);
+    const p   = products.find(x=>x.id===id);
     if(p){
       const diff = val - p.qty;
       p.qty = val;
-      p.available = Math.max(0, p.available + diff);
+      p.available = Math.max(0, p.available+diff);
+      batch.update(db.collection('products').doc(id), {qty:p.qty, available:p.available});
     }
   });
-  save();
-  renderInventoryGrid();
-  renderAdminStats();
-  showToast('💾 Inventario guardado','success');
+  await batch.commit();
+  hideLoader();
+  renderInventoryGrid(); renderAdminStats();
+  showToast('💾 Inventario guardado en la nube','success');
 }
 
 function renderUsersGrid(){
@@ -1164,105 +1324,196 @@ function renderUsersGrid(){
   }).join('');
 }
 
-function returnLoan(loanId){
+async function returnLoan(loanId){
   const loan = loans.find(l=>l.id===loanId);
   if(!loan) return;
-  loan.status = 'devuelto';
-  loan.returnDate = nowStamp();
-  // Restore availability
+  showLoader('Registrando devolución...');
+  const returnDate = nowStamp();
+  const batch = db.batch();
+  batch.update(db.collection('loans').doc(loanId), {status:'devuelto', returnDate});
   loan.items.forEach(i=>{
     const p = products.find(x=>x.id===i.id);
-    if(p) p.available = Math.min(p.qty, p.available+i.qty);
+    if(p){
+      const newAvail = Math.min(p.qty, p.available+i.qty);
+      batch.update(db.collection('products').doc(p.id), {available:newAvail});
+      p.available = newAvail;
+    }
   });
-  save();
-  renderAdminStats();
-  renderLoansTable();
-  renderHistoryTable();
-  renderInventoryGrid();
+  await batch.commit();
+  loan.status='devuelto'; loan.returnDate=returnDate;
+  hideLoader();
+  renderAdminStats(); renderLoansTable(); renderHistoryTable(); renderInventoryGrid();
   showToast('✅ Material marcado como devuelto','success');
 }
 
 function showAdminTab(tab){
-  document.querySelectorAll('.admin-tab').forEach((t,i)=>{
-    t.classList.remove('active');
-  });
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
-  const tabs = ['loans','history','inventory','users'];
-  const idx = tabs.indexOf(tab);
-  document.querySelectorAll('.admin-tab')[idx].classList.add('active');
+  const tabs=['loans','history','inventory','users'];
+  document.querySelectorAll('.admin-tab')[tabs.indexOf(tab)].classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
 }
 
-// ============================
-// LOANS SIDEBAR (USER)
-// ============================
-function openLoans(){
-  renderLoansBody();
-  document.getElementById('loans-overlay').classList.add('open');
-  document.getElementById('loans-sidebar').classList.add('open');
+// ============================================================
+// ADMIN: CREATE LOAN MANUALLY
+// ============================================================
+function openAdminLoanModal(){
+  adminCart=[];
+  const sel = document.getElementById('admin-loan-user');
+  sel.innerHTML = '<option value="">— Elige un alumno —</option>'+
+    users.map(u=>`<option value="${u.matricula}">${u.nombre} (${u.matricula})</option>`).join('');
+  document.getElementById('admin-loan-user-info').style.display='none';
+  renderPicker(''); renderAdminSelected();
+  document.getElementById('admin-loan-modal').classList.add('open');
 }
-function closeLoans(){
-  document.getElementById('loans-overlay').classList.remove('open');
-  document.getElementById('loans-sidebar').classList.remove('open');
-}
-function renderLoansBody(){
-  const myLoans = loans.filter(l=>l.userId===currentUser.matricula);
-  const body = document.getElementById('loans-body');
-  if(myLoans.length===0){
-    body.innerHTML=`<div class="loans-empty"><div class="empty-icon">📭</div><p>Aún no tienes préstamos registrados</p></div>`;
-    return;
+
+document.addEventListener('change',function(e){
+  if(e.target.id==='admin-loan-user'){
+    const u = users.find(x=>x.matricula===e.target.value);
+    const info = document.getElementById('admin-loan-user-info');
+    if(u){info.style.display='block';info.innerHTML=`📧 ${u.correo} &nbsp;|&nbsp; 📚 ${u.clase} &nbsp;|&nbsp; 👨‍🏫 ${u.maestro}`;}
+    else{info.style.display='none';}
   }
-  body.innerHTML = [...myLoans].reverse().map(l=>{
-    const isActive = l.status==='prestado';
-    return `<div class="loan-card">
-      <div class="loan-card-head">
-        <span class="status-badge status-${l.status}">● ${isActive?'Prestado':'Devuelto'}</span>
-        <span class="loan-date">📅 ${l.date}</span>
-      </div>
-      <div class="loan-items-grid">
-        ${l.items.map(i=>`<div class="loan-item-chip">${i.emoji} ${i.name} <span>×${i.qty}</span></div>`).join('')}
-      </div>
-      <div class="loan-footer-row">
-        <span class="loan-id">ID: ${l.id}</span>
-        ${isActive
-          ? `<span style="font-size:11px;color:var(--warn)">⏳ Pendiente de devolución</span>`
-          : `<span style="font-size:11px;color:var(--success)">✓ Devuelto el ${l.returnDate}</span>`
-        }
-      </div>
+});
+
+function renderPicker(search){
+  const filtered = search ? products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())) : products;
+  const container = document.getElementById('product-picker');
+  container.innerHTML = filtered.map(p=>{
+    const sel    = adminCart.find(c=>c.id===p.id);
+    const unavail= p.available===0;
+    return `<div class="picker-card${sel?' selected':''}${unavail?' unavail':''}" onclick="togglePickerItem('${p.id}')">
+      <div class="picker-check">✓</div>
+      <div class="picker-emoji">${p.emoji}</div>
+      <div class="picker-name">${p.name}</div>
+      <div class="picker-avail">${unavail?'Sin stock':p.available+' disponibles'}</div>
     </div>`;
   }).join('');
 }
-function updateLoansDot(){
-  const active = loans.filter(l=>l.userId===currentUser?.matricula && l.status==='prestado').length;
-  document.getElementById('loans-dot')?.classList.toggle('show', active>0);
+
+function togglePickerItem(id){
+  const p = products.find(x=>x.id===id);
+  if(!p||p.available===0) return;
+  const idx = adminCart.findIndex(c=>c.id===id);
+  if(idx>-1) adminCart.splice(idx,1);
+  else adminCart.push({id:p.id,name:p.name,emoji:p.emoji,cat:p.cat,qty:1});
+  renderAdminSelected(); renderPicker(document.getElementById('picker-search').value);
 }
 
-// ============================
-// TOAST
-// ============================
-let toastTimer;
-function showToast(msg, type='info'){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
+function renderAdminSelected(){
+  const container = document.getElementById('admin-selected-items');
+  if(adminCart.length===0){container.innerHTML='<span style="color:var(--muted);font-size:12px">Ningún material seleccionado aún...</span>';return;}
+  container.innerHTML = adminCart.map(item=>{
+    const prod   = products.find(p=>p.id===item.id);
+    const atMax  = item.qty>=prod.available;
+    const plusClr= atMax?'var(--warn)':'var(--accent)';
+    return `<div class="sel-chip">${item.emoji} ${item.name}
+      <span style="display:flex;align-items:center;gap:3px;margin-left:4px">
+        <button onclick="adminQty('${item.id}',-1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">−</button>
+        <span style="font-weight:700;font-size:12px">${item.qty}</span>
+        <button onclick="adminQty('${item.id}',1)" style="background:none;border:none;color:${plusClr};cursor:pointer;font-size:14px">+</button>
+        <span style="font-size:10px;color:var(--muted)">/${prod.available}</span>
+      </span>
+      <button onclick="togglePickerItem('${item.id}')">✕</button>
+    </div>`;
+  }).join('');
 }
 
-// ============================
-// INIT
-// ============================
-document.addEventListener('keydown', e=>{
+function adminQty(id,delta){
+  const item=adminCart.find(c=>c.id===id);
+  const prod=products.find(p=>p.id===id);
+  if(!item) return;
+  const nq=item.qty+delta;
+  if(nq<1) return;
+  if(nq>prod.available){showToast(`⚠️ Solo hay ${prod.available} disponibles`,'error');return;}
+  item.qty=nq; renderAdminSelected();
+}
+
+async function confirmAdminLoan(){
+  const mat = document.getElementById('admin-loan-user').value;
+  if(!mat){showToast('⚠️ Selecciona un alumno','error');return;}
+  if(adminCart.length===0){showToast('⚠️ Agrega al menos un material','error');return;}
+  showLoader('Registrando préstamo...');
+  const u = users.find(x=>x.matricula===mat);
+  const loanId = 'L'+Date.now();
+  const loan = {
+    id:loanId, userId:u.matricula, userName:u.nombre, correo:u.correo,
+    clase:u.clase, maestro:u.maestro,
+    items:adminCart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
+    date:nowStamp(), status:'prestado', returnDate:null, createdByAdmin:true
+  };
+  const batch = db.batch();
+  batch.set(db.collection('loans').doc(loanId), loan);
+  adminCart.forEach(i=>{
+    const p=products.find(x=>x.id===i.id);
+    if(p){
+      const na=Math.max(0,p.available-i.qty);
+      batch.update(db.collection('products').doc(p.id),{available:na});
+      p.available=na;
+    }
+  });
+  await batch.commit();
+  loans.push(loan); adminCart=[];
+  hideLoader();
+  closeModal('admin-loan-modal');
+  renderAdminStats(); renderLoansTable(); renderHistoryTable(); renderInventoryGrid();
+  showToast(`✅ Préstamo registrado para ${u.nombre}`,'success');
+}
+
+// ============================================================
+// EXPORT TO EXCEL
+// ============================================================
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){showToast('Error: XLSX no cargado','error');return;}
+  const rows = loans.map(l=>({
+    'ID Préstamo':l.id,'Alumno':l.userName,'Matrícula':l.userId,
+    'Correo':l.correo,'Clase':l.clase,'Maestro':l.maestro,
+    'Materiales':l.items.map(i=>i.name+' x'+i.qty).join(', '),
+    'Fecha Préstamo':l.date,'Fecha Devolución':l.returnDate||'Pendiente',
+    'Estado':l.status==='prestado'?'Prestado':'Devuelto',
+    'Registrado por':l.createdByAdmin?'Admin':'Alumno'
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:24},{wch:12},{wch:26},{wch:20},{wch:20},{wch:50},{wch:20},{wch:20},{wch:12},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Préstamos');
+  const fecha=new Date().toLocaleDateString('es-MX').replace(/\//g,'-');
+  XLSX.writeFile(wb,'LabMeca_Historial_'+fecha+'.xlsx');
+  showToast('📥 Excel descargado','success');
+}
+
+// ============================================================
+// INIT — app entry point
+// ============================================================
+async function appInit(){
+  showLoader('Conectando con Firebase...');
+  try {
+    await loadProducts();
+    if(isAdmin){
+      await loadLoans(); await loadUsers();
+      hideLoader(); initAdmin(); showView('admin');
+    } else if(currentUser){
+      await loadLoans();
+      hideLoader(); initStore(); showView('store');
+    } else {
+      hideLoader(); showView('login');
+    }
+  } catch(e){
+    hideLoader();
+    console.error(e);
+    showToast('⚠️ Error de conexión con Firebase','error');
+    showView('login');
+  }
+}
+
+document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
     if(document.getElementById('view-login').classList.contains('active')) doLogin();
     if(document.getElementById('view-register').classList.contains('active')) doRegister();
   }
 });
 
-// Auto-login if session exists
-if(isAdmin){initAdmin();showView('admin');}
-else if(currentUser){initStore();showView('store');}
-else{showView('login');}
+appInit();
 </script>
 </body>
 </html>
