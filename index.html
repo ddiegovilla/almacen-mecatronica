@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabMeca · Tec de Monterrey</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070c18;
+  --bg2: #0d1525;
+  --bg3: #111d32;
+  --card: #0f1a2e;
+  --border: rgba(0,180,255,0.12);
+  --accent: #00c2ff;
+  --accent2: #0057b8;
+  --tec: #003087;
+  --text: #dde6f5;
+  --muted: #556480;
+  --success: #00d67a;
+  --warn: #f5a623;
+  --danger: #ff4d6a;
+  --r: 10px;
+  --r2: 16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:3px}
+
+/* Grid bg pattern */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;opacity:.4;z-index:0;
+}
+
+/* ===== VIEWS ===== */
+.view{display:none;position:relative;z-index:1;min-height:100vh}
+.view.active{display:block}
+
+/* ===== AUTH ===== */
+#view-login, #view-register{
+  display:none;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;
+}
+#view-login.active, #view-register.active{display:flex}
+
+.auth-wrap{
+  width:100%;max-width:420px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r2);padding:48px 40px;
+  box-shadow:0 0 60px rgba(0,194,255,.07);
+  animation:fadeUp .4s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.auth-logo .dot{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:20px}
+.auth-logo h1{font-family:'Bebas Neue';font-size:26px;letter-spacing:2px;color:var(--accent)}
+.auth-logo span{display:block;font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:-2px}
+
+.auth-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:12px;font-weight:600;letter-spacing:.8px;color:var(--muted);margin-bottom:6px;text-transform:uppercase}
+.form-group input, .form-group select{
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px 14px;color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:14px;outline:none;
+  transition:border-color .2s;
+}
+.form-group input:focus, .form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:var(--bg2)}
+
+.btn{
+  width:100%;padding:13px;border:none;border-radius:var(--r);
+  font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,194,255,.25)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+.auth-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.auth-footer a{color:var(--accent);cursor:pointer;text-decoration:none}
+.auth-footer a:hover{text-decoration:underline}
+
+.admin-link{
+  display:block;text-align:center;margin-top:28px;padding-top:20px;
+  border-top:1px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer;
+}
+.admin-link:hover{color:var(--accent)}
+
+.admin-login-field{margin-top:12px;display:none}
+.error-msg{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+
+/* ===== STORE ===== */
+#view-store{display:none;flex-direction:column}
+#view-store.active{display:flex}
+
+.store-header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,12,24,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;height:64px;display:flex;align-items:center;gap:16px;
+}
+.store-logo{font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;color:var(--accent);white-space:nowrap}
+.store-logo span{color:var(--muted);font-size:14px;font-family:'Outfit';letter-spacing:0;margin-left:8px}
+.store-header-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.user-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:50px;padding:6px 14px 6px 8px;font-size:13px;
+}
+.user-pill .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+.cart-btn{
+  position:relative;background:var(--bg2);border:1px solid var(--border);
+  border-radius:50px;padding:8px 16px;display:flex;align-items:center;gap:8px;
+  cursor:pointer;font-size:13px;transition:all .2s;color:var(--text);
+}
+.cart-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cart-count{
+  position:absolute;top:-4px;right:-4px;
+  width:18px;height:18px;border-radius:50%;background:var(--accent);
+  font-size:10px;font-weight:700;display:grid;place-items:center;color:#000;
+  display:none;
+}
+.cart-count.show{display:grid}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:50px;padding:7px 14px;cursor:pointer;font-size:12px;transition:all .2s}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+
+.store-main{padding:28px 24px;max-width:1400px;margin:0 auto;width:100%}
+
+/* Combos */
+.section-title{font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.combos-scroll{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;margin-bottom:32px}
+.combos-scroll::-webkit-scrollbar{height:3px}
+.combo-card{
+  flex:0 0 240px;background:linear-gradient(135deg,var(--bg3),var(--card));
+  border:1px solid var(--border);border-radius:var(--r2);padding:20px;cursor:pointer;
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.combo-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,194,255,.05),transparent);
+  opacity:0;transition:opacity .25s;
+}
+.combo-card:hover{transform:translateY(-3px);border-color:rgba(0,194,255,.4);box-shadow:0 12px 32px rgba(0,194,255,.1)}
+.combo-card:hover::before{opacity:1}
+.combo-icon{font-size:32px;margin-bottom:12px}
+.combo-name{font-weight:700;font-size:15px;margin-bottom:6px}
+.combo-desc{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.combo-items-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.combo-tag{background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.15);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--accent)}
+.btn-combo{
+  width:100%;padding:9px;border:1px solid var(--accent);border-radius:var(--r);
+  background:rgba(0,194,255,.08);color:var(--accent);font-family:'Outfit',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.btn-combo:hover{background:var(--accent);color:#000}
+
+/* Category filters */
+.cat-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.cat-btn{
+  padding:7px 16px;border-radius:50px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);font-family:'Outfit',sans-serif;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.3px;
+}
+.cat-btn:hover, .cat-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* Products grid */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.product-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  overflow:hidden;transition:all .25s;
+}
+.product-card:hover{transform:translateY(-3px);border-color:rgba(0,194,255,.3);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.product-card.out-of-stock{opacity:.5;pointer-events:none}
+.product-img{
+  height:110px;display:flex;align-items:center;justify-content:center;
+  font-size:48px;position:relative;overflow:hidden;
+}
+.product-img .qty-badge{
+  position:absolute;top:8px;right:8px;
+  background:rgba(0,0,0,.6);border-radius:6px;padding:2px 7px;
+  font-size:10px;font-weight:700;color:var(--text);
+}
+.product-img .qty-badge.low{color:var(--warn)}
+.product-img .qty-badge.out{color:var(--danger)}
+.product-body{padding:14px}
+.product-cat{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.product-name{font-weight:600;font-size:14px;line-height:1.3;margin-bottom:12px}
+.btn-add{
+  width:100%;padding:9px;border:1px solid var(--accent);border-radius:8px;
+  background:transparent;color:var(--accent);font-family:'Outfit',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;
+}
+.btn-add:hover{background:var(--accent);color:#000}
+.btn-add.added{background:var(--success);border-color:var(--success);color:#000}
+
+/* ===== CART SIDEBAR ===== */
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;opacity:0;transition:opacity .3s}
+.cart-overlay.open{display:block;opacity:1}
+.cart-sidebar{
+  position:fixed;right:0;top:0;bottom:0;width:380px;max-width:100vw;
+  background:var(--bg2);border-left:1px solid var(--border);z-index:201;
+  display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;
+}
+.cart-sidebar.open{transform:translateX(0)}
+.cart-header{padding:24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.cart-header h3{font-family:'Bebas Neue';font-size:20px;letter-spacing:1px;flex:1}
+.cart-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px}
+.cart-close:hover{color:var(--text)}
+.cart-items{flex:1;overflow-y:auto;padding:16px}
+.cart-empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.cart-empty .empty-icon{font-size:48px;margin-bottom:12px}
+.cart-item{
+  display:flex;align-items:center;gap:12px;padding:12px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:8px;
+}
+.cart-item-icon{font-size:28px;width:48px;text-align:center}
+.cart-item-info{flex:1}
+.cart-item-name{font-size:13px;font-weight:600;line-height:1.3}
+.cart-item-cat{font-size:11px;color:var(--muted)}
+.cart-item-qty{display:flex;align-items:center;gap:6px;margin-top:6px}
+.qty-btn{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px;transition:all .15s}
+.qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+.qty-num{font-size:13px;font-weight:700;min-width:20px;text-align:center}
+.cart-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
+.cart-remove:hover{color:var(--danger)}
+.cart-footer{padding:20px;border-top:1px solid var(--border)}
+.cart-summary{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+.cart-summary strong{color:var(--text)}
+.reserve-btn{
+  width:100%;padding:14px;border:none;border-radius:var(--r);margin-top:14px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.reserve-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,194,255,.3)}
+.reserve-btn:disabled{opacity:.4;pointer-events:none}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);width:100%;max-width:480px;animation:fadeUp .3s ease}
+.modal-head{padding:24px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.modal-head h3{flex:1;font-family:'Bebas Neue';font-size:20px;letter-spacing:1px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
+.modal-body{padding:24px 28px}
+.modal-foot{padding:16px 28px 24px;display:flex;gap:10px;justify-content:flex-end}
+.confirm-items{margin:14px 0;max-height:200px;overflow-y:auto}
+.confirm-item{display:flex;justify-content:space-between;padding:8px 12px;background:var(--card);border-radius:var(--r);margin-bottom:6px;font-size:13px}
+.confirm-item span{color:var(--muted)}
+.confirm-note{font-size:12px;color:var(--warn);margin-top:12px;padding:10px 14px;background:rgba(245,166,35,.08);border-radius:var(--r);border-left:3px solid var(--warn)}
+
+/* ===== LOANS SIDEBAR ===== */
+.loans-sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:420px;max-width:100vw;
+  background:var(--bg2);border-right:1px solid var(--border);z-index:201;
+  display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .3s ease;
+}
+.loans-sidebar.open{transform:translateX(0)}
+.loans-header{padding:24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.loans-header h3{font-family:'Bebas Neue';font-size:20px;letter-spacing:1px;flex:1}
+.loans-body{flex:1;overflow-y:auto;padding:16px}
+.loan-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:16px;margin-bottom:12px;transition:border-color .2s;
+}
+.loan-card:hover{border-color:rgba(0,194,255,.25)}
+.loan-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.loan-date{font-size:11px;color:var(--muted)}
+.loan-items-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.loan-item-chip{
+  display:flex;align-items:center;gap:5px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:4px 9px;font-size:12px;
+}
+.loan-item-chip span{color:var(--muted);font-size:10px}
+.loan-footer-row{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)}
+.loan-id{font-size:10px;color:var(--muted);font-family:monospace}
+.loans-empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.loans-empty .empty-icon{font-size:48px;margin-bottom:12px}
+
+/* Loans button */
+.loans-btn{
+  position:relative;background:var(--bg2);border:1px solid var(--border);
+  border-radius:50px;padding:8px 16px;display:flex;align-items:center;gap:8px;
+  cursor:pointer;font-size:13px;transition:all .2s;color:var(--text);
+}
+.loans-btn:hover{border-color:var(--accent);color:var(--accent)}
+.loans-active-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--warn);
+  display:none;
+}
+.loans-active-dot.show{display:block}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--bg2);border:1px solid var(--border);border-radius:50px;
+  padding:12px 20px;font-size:13px;font-weight:600;z-index:999;
+  transition:transform .3s ease;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+
+/* ===== ADMIN ===== */
+#view-admin{display:none;flex-direction:column}
+#view-admin.active{display:flex}
+.admin-header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,12,24,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);padding:0 24px;
+  height:64px;display:flex;align-items:center;gap:16px;
+}
+.admin-badge{background:rgba(0,194,255,.12);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase}
+.admin-main{padding:28px 24px;max-width:1400px;margin:0 auto;width:100%}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
+.stat-num{font-family:'Bebas Neue';font-size:42px;letter-spacing:1px;line-height:1;color:var(--accent)}
+.stat-num.green{color:var(--success)}
+.stat-num.warn{color:var(--warn)}
+.stat-label{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.8px}
+
+.admin-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.admin-tab{
+  padding:12px 20px;background:none;border:none;color:var(--muted);
+  font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;
+  letter-spacing:.3px;
+}
+.admin-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.admin-tab:hover{color:var(--text)}
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+
+.table-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--bg3)}
+th{padding:12px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;white-space:nowrap}
+td{padding:12px 16px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.status-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:50px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;
+}
+.status-prestado{background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.25)}
+.status-devuelto{background:rgba(0,214,122,.12);color:var(--success);border:1px solid rgba(0,214,122,.25)}
+.btn-sm{
+  padding:5px 12px;border-radius:6px;border:none;font-family:'Outfit',sans-serif;
+  font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;
+}
+.btn-return{background:rgba(0,214,122,.12);color:var(--success);border:1px solid rgba(0,214,122,.25)}
+.btn-return:hover{background:var(--success);color:#000}
+.btn-edit{background:rgba(0,194,255,.1);color:var(--accent);border:1px solid rgba(0,194,255,.2)}
+.btn-edit:hover{background:var(--accent);color:#000}
+
+.inventory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.inv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;align-items:center;gap:14px}
+.inv-icon{font-size:30px;width:48px;text-align:center}
+.inv-info{flex:1}
+.inv-name{font-size:13px;font-weight:600}
+.inv-cat{font-size:10px;color:var(--muted);margin-bottom:6px}
+.inv-qty-row{display:flex;align-items:center;gap:6px}
+.inv-qty-input{width:50px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;text-align:center;outline:none}
+.inv-qty-input:focus{border-color:var(--accent)}
+.inv-total{font-size:11px;color:var(--muted)}
+.inv-avail{font-size:12px;font-weight:700}
+.inv-avail.ok{color:var(--success)}
+.inv-avail.low{color:var(--warn)}
+.inv-avail.out{color:var(--danger)}
+
+.user-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:16px;display:flex;align-items:center;gap:14px;
+}
+.user-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{}
+.user-name{font-weight:600;font-size:14px}
+.user-mat{font-size:11px;color:var(--accent);font-weight:700}
+.user-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+
+.search-input{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 16px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;
+  outline:none;width:280px;transition:border-color .2s;
+}
+.search-input:focus{border-color:var(--accent)}
+.table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+
+.highlight{color:var(--accent);font-weight:700}
+
+/* Responsive */
+@media(max-width:640px){
+  .auth-wrap{padding:32px 24px}
+  .store-main, .admin-main{padding:20px 16px}
+  .cart-sidebar{width:100vw}
+  .admin-tabs{overflow-x:auto}
+  .admin-tab{white-space:nowrap}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="view-login" class="view">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="dot">⚙️</div>
+      <div>
+        <h1>LabMeca</h1>
+        <span>ALMACÉN · A7-236 · MECATRÓNICA</span>
+      </div>
+    </div>
+    <p class="auth-title">Bienvenido</p>
+    <p class="auth-sub">Ingresa con tu matrícula para continuar</p>
+    <div class="form-group">
+      <label>Matrícula</label>
+      <input type="text" id="login-mat" placeholder="Ej. A01234567" autocomplete="off">
+    </div>
+    <div id="login-error" class="error-msg">Matrícula no encontrada. ¿Ya tienes cuenta?</div>
+    <button class="btn btn-primary" onclick="doLogin()">Iniciar Sesión</button>
+    <p class="auth-footer">¿No tienes cuenta? <a onclick="showView('register')">Regístrate aquí</a></p>
+    <div class="admin-link" onclick="toggleAdminField()">🔐 Acceso Administrador</div>
+    <div class="admin-login-field" id="admin-field">
+      <div class="form-group" style="margin-top:10px">
+        <label>Contraseña Admin</label>
+        <input type="password" id="admin-pass" placeholder="••••••••">
+      </div>
+      <div id="admin-error" class="error-msg">Contraseña incorrecta</div>
+      <button class="btn btn-ghost" style="margin-top:4px" onclick="doAdminLogin()">Entrar como Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REGISTER ===== -->
+<div id="view-register" class="view">
+  <div class="auth-wrap" style="max-width:480px">
+    <div class="auth-logo">
+      <div class="dot">⚙️</div>
+      <div><h1>LabMeca</h1><span>CREAR CUENTA</span></div>
+    </div>
+    <p class="auth-title">Nueva Cuenta</p>
+    <p class="auth-sub">Solo necesitas registrarte una vez</p>
+    <div class="form-group">
+      <label>Nombre Completo</label>
+      <input type="text" id="reg-nombre" placeholder="Ej. Ana García Pérez">
+    </div>
+    <div class="form-group">
+      <label>Matrícula</label>
+      <input type="text" id="reg-mat" placeholder="Ej. A01234567">
+    </div>
+    <div class="form-group">
+      <label>Correo Institucional</label>
+      <input type="email" id="reg-correo" placeholder="Ej. a01234567@tec.mx">
+    </div>
+    <div class="form-group">
+      <label>Clase / Materia</label>
+      <input type="text" id="reg-clase" placeholder="Ej. Mecatrónica 3, Robótica...">
+    </div>
+    <div class="form-group">
+      <label>Maestro</label>
+      <input type="text" id="reg-maestro" placeholder="Ej. Dr. Juan López">
+    </div>
+    <div id="reg-error" class="error-msg">Por favor completa todos los campos</div>
+    <button class="btn btn-primary" onclick="doRegister()">Crear Cuenta</button>
+    <p class="auth-footer">¿Ya tienes cuenta? <a onclick="showView('login')">Inicia sesión</a></p>
+  </div>
+</div>
+
+<!-- ===== STORE ===== -->
+<div id="view-store" class="view">
+  <header class="store-header">
+    <div class="store-logo">LabMeca <span>Almacén Mecatrónica</span></div>
+    <div class="store-header-right">
+      <div class="user-pill">
+        <div class="avatar" id="user-avatar">?</div>
+        <span id="user-name-display">Usuario</span>
+      </div>
+      <button class="loans-btn" onclick="openLoans()">
+        📋 Mis Préstamos
+        <div class="loans-active-dot" id="loans-dot"></div>
+      </button>
+      <button class="cart-btn" onclick="openCart()">
+        🛒 Carrito
+        <span class="cart-count" id="cart-count">0</span>
+      </button>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+  <div class="store-main">
+    <!-- Combos -->
+    <div class="section-title">⚡ COMBOS RÁPIDOS</div>
+    <div class="combos-scroll" id="combos-container"></div>
+    <!-- Filters -->
+    <div class="section-title">📦 MATERIALES</div>
+    <div class="cat-filters" id="cat-filters"></div>
+    <!-- Products -->
+    <div class="products-grid" id="products-grid"></div>
+  </div>
+</div>
+
+<!-- ===== CART SIDEBAR ===== -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-sidebar" id="cart-sidebar">
+  <div class="cart-header">
+    <h3>🛒 Tu Carrito</h3>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items-list">
+    <div class="cart-empty"><div class="empty-icon">📭</div><p>Tu carrito está vacío</p></div>
+  </div>
+  <div class="cart-footer">
+    <div class="cart-summary"><span>Artículos:</span><strong id="cart-total-items">0</strong></div>
+    <button class="reserve-btn" id="reserve-btn" onclick="openReserveModal()" disabled>Reservar Materiales →</button>
+  </div>
+</div>
+
+<!-- ===== LOANS SIDEBAR ===== -->
+<div class="cart-overlay" id="loans-overlay" onclick="closeLoans()"></div>
+<div class="loans-sidebar" id="loans-sidebar">
+  <div class="loans-header">
+    <h3>📋 Mis Préstamos</h3>
+    <button class="cart-close" onclick="closeLoans()">✕</button>
+  </div>
+  <div class="loans-body" id="loans-body"></div>
+</div>
+
+<!-- ===== RESERVE MODAL ===== -->
+<div class="modal-overlay" id="reserve-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>📋 Confirmar Reserva</h3>
+      <button class="modal-close" onclick="closeModal('reserve-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted)">Estás a punto de reservar los siguientes materiales:</p>
+      <div class="confirm-items" id="confirm-items-list"></div>
+      <div class="confirm-note">⚠️ Recuerda pasar al almacén A7-236 a recoger tus materiales y firmar el préstamo.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" style="width:auto;padding:10px 20px" onclick="closeModal('reserve-modal')">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;padding:10px 24px" onclick="confirmReserve()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN ===== -->
+<div id="view-admin" class="view">
+  <header class="admin-header">
+    <div class="store-logo">LabMeca</div>
+    <div class="admin-badge">Administrador</div>
+    <div style="margin-left:auto">
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+  <div class="admin-main">
+    <!-- Stats -->
+    <div class="stats-row" id="admin-stats"></div>
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="showAdminTab('loans')">Préstamos Activos</button>
+      <button class="admin-tab" onclick="showAdminTab('history')">Historial</button>
+      <button class="admin-tab" onclick="showAdminTab('inventory')">Inventario</button>
+      <button class="admin-tab" onclick="showAdminTab('users')">Usuarios</button>
+    </div>
+    <!-- Loans panel -->
+    <div class="admin-panel active" id="panel-loans">
+      <div class="table-controls">
+        <span style="font-size:13px;color:var(--muted)">Préstamos pendientes de devolución</span>
+        <input class="search-input" placeholder="🔍 Buscar alumno..." oninput="renderLoansTable(this.value)">
+      </div>
+      <div class="table-wrap"><table id="loans-table">
+        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Clase</th><th>Materiales</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="loans-tbody"></tbody>
+      </table></div>
+    </div>
+    <!-- History panel -->
+    <div class="admin-panel" id="panel-history">
+      <div class="table-controls">
+        <span style="font-size:13px;color:var(--muted)">Historial completo de préstamos</span>
+        <input class="search-input" placeholder="🔍 Buscar..." oninput="renderHistoryTable(this.value)">
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Correo</th><th>Maestro</th><th>Materiales</th><th>Fecha Préstamo</th><th>Fecha Devolución</th><th>Estado</th></tr></thead>
+        <tbody id="history-tbody"></tbody>
+      </table></div>
+    </div>
+    <!-- Inventory panel -->
+    <div class="admin-panel" id="panel-inventory">
+      <div class="table-controls">
+        <span style="font-size:13px;color:var(--muted)">Gestión de inventario</span>
+        <button class="btn-sm btn-edit" onclick="saveInventory()" style="padding:8px 18px">💾 Guardar cambios</button>
+      </div>
+      <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
+    <!-- Users panel -->
+    <div class="admin-panel" id="panel-users">
+      <div class="table-controls">
+        <span style="font-size:13px;color:var(--muted)">Alumnos registrados</span>
+        <input class="search-input" placeholder="🔍 Buscar usuario...">
+      </div>
+      <div class="users-grid" id="users-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================
+// DATA
+// ============================
+const ADMIN_PASSWORD = 'mecatronica2024';
+
+const INITIAL_PRODUCTS = [
+  // EPP
+  {id:'p01',name:'Guantes de seguridad',cat:'EPP',qty:5,emoji:'🧤',bg:'#1a2a3a'},
+  {id:'p02',name:'Guantes de nitrilo',cat:'EPP',qty:5,emoji:'🧤',bg:'#1a2a3a'},
+  {id:'p03',name:'Goggles de seguridad',cat:'EPP',qty:4,emoji:'🥽',bg:'#1a2a3a'},
+  {id:'p04',name:'Lentes de seguridad',cat:'EPP',qty:4,emoji:'🥽',bg:'#1a2a3a'},
+  // Instrumentos Básicos
+  {id:'p05',name:'Cables banana',cat:'Instrumentos',qty:10,emoji:'🔌',bg:'#1a2a1a'},
+  {id:'p06',name:'Cables caimán',cat:'Instrumentos',qty:8,emoji:'🐊',bg:'#1a2a1a'},
+  {id:'p07',name:'Jumpers',cat:'Instrumentos',qty:20,emoji:'🔗',bg:'#1a2a1a'},
+  {id:'p08',name:'Multímetro',cat:'Instrumentos',qty:5,emoji:'📊',bg:'#1a2a1a'},
+  // Para Cortes
+  {id:'p09',name:'Prensas de mesa',cat:'Cortes',qty:4,emoji:'🗜️',bg:'#2a1a1a'},
+  {id:'p10',name:'Regla L',cat:'Cortes',qty:5,emoji:'📐',bg:'#2a1a1a'},
+  {id:'p11',name:'Plumón',cat:'Cortes',qty:8,emoji:'✏️',bg:'#2a1a1a'},
+  // Taladrado
+  {id:'p12',name:'Taladro',cat:'Taladrado',qty:3,emoji:'🔨',bg:'#1a1a2a'},
+  {id:'p13',name:'Broca MM',cat:'Taladrado',qty:6,emoji:'🔩',bg:'#1a1a2a'},
+  {id:'p14',name:'Broca STD',cat:'Taladrado',qty:6,emoji:'🔩',bg:'#1a1a2a'},
+  {id:'p15',name:'Sacabocados',cat:'Taladrado',qty:3,emoji:'⭕',bg:'#1a1a2a'},
+  {id:'p16',name:'Broca GUIA',cat:'Taladrado',qty:4,emoji:'🔩',bg:'#1a1a2a'},
+  {id:'p17',name:'Punta de cruz',cat:'Taladrado',qty:8,emoji:'✝️',bg:'#1a1a2a'},
+  {id:'p18',name:'Punta plana',cat:'Taladrado',qty:8,emoji:'➖',bg:'#1a1a2a'},
+  // Soldadura
+  {id:'p19',name:'Cautín',cat:'Soldadura',qty:4,emoji:'🔥',bg:'#2a1a0a'},
+  {id:'p20',name:'Estaño',cat:'Soldadura',qty:5,emoji:'🧵',bg:'#2a1a0a'},
+  {id:'p21',name:'Pasta para soldar',cat:'Soldadura',qty:5,emoji:'🧴',bg:'#2a1a0a'},
+  {id:'p22',name:'Soporte para cautín',cat:'Soldadura',qty:4,emoji:'🏷️',bg:'#2a1a0a'},
+  {id:'p23',name:'Atril',cat:'Soldadura',qty:3,emoji:'📌',bg:'#2a1a0a'},
+  // Instrumentos A
+  {id:'p24',name:'Fuente de poder',cat:'Instrumentos A',qty:4,emoji:'⚡',bg:'#0a1a2a'},
+  {id:'p25',name:'Cable de alimentación',cat:'Instrumentos A',qty:4,emoji:'🔌',bg:'#0a1a2a'},
+  {id:'p26',name:'Cables banana-caimán',cat:'Instrumentos A',qty:8,emoji:'🔌',bg:'#0a1a2a'},
+  // Instrumentos B
+  {id:'p27',name:'Osciloscopio',cat:'Instrumentos B',qty:3,emoji:'📺',bg:'#0a2a1a'},
+  {id:'p28',name:'Cable sonda osciloscopio',cat:'Instrumentos B',qty:6,emoji:'🔌',bg:'#0a2a1a'},
+  // Instrumentos C
+  {id:'p29',name:'Generador de funciones',cat:'Instrumentos C',qty:2,emoji:'📡',bg:'#1a0a2a'},
+  {id:'p30',name:'Cable generador',cat:'Instrumentos C',qty:4,emoji:'🔌',bg:'#1a0a2a'},
+  // Cortes avanzados
+  {id:'p31',name:'Caladora',cat:'Cortes',qty:2,emoji:'🪚',bg:'#2a1a1a'},
+  {id:'p32',name:'Segueta',cat:'Cortes',qty:3,emoji:'🪚',bg:'#2a1a1a'},
+  {id:'p33',name:'Serrucho',cat:'Cortes',qty:2,emoji:'🪚',bg:'#2a1a1a'},
+  // Adhesivos
+  {id:'p34',name:'Cinta de aislar',cat:'Adhesivos',qty:8,emoji:'🎗️',bg:'#2a2a0a'},
+  {id:'p35',name:'Cinta transparente',cat:'Adhesivos',qty:8,emoji:'🎗️',bg:'#2a2a0a'},
+  {id:'p36',name:'Cinta masking tape',cat:'Adhesivos',qty:6,emoji:'🎗️',bg:'#2a2a0a'},
+  {id:'p37',name:'Cinta para tubería',cat:'Adhesivos',qty:5,emoji:'🎗️',bg:'#2a2a0a'},
+  {id:'p38',name:'Cinta canela',cat:'Adhesivos',qty:5,emoji:'📦',bg:'#2a2a0a'},
+  {id:'p39',name:'Kola Loka',cat:'Adhesivos',qty:4,emoji:'💧',bg:'#2a2a0a'},
+  {id:'p40',name:'Loctite',cat:'Adhesivos',qty:3,emoji:'🔵',bg:'#2a2a0a'},
+  {id:'p41',name:'Resistol 850',cat:'Adhesivos',qty:4,emoji:'💛',bg:'#2a2a0a'},
+  {id:'p42',name:'Resistol 950',cat:'Adhesivos',qty:4,emoji:'🟡',bg:'#2a2a0a'},
+  {id:'p43',name:'Pistola de silicón',cat:'Adhesivos',qty:3,emoji:'🔫',bg:'#2a2a0a'},
+  // Medición
+  {id:'p44',name:'Flexómetro',cat:'Medición',qty:5,emoji:'📏',bg:'#0a2a2a'},
+  {id:'p45',name:'Escuadra',cat:'Medición',qty:4,emoji:'📐',bg:'#0a2a2a'},
+  {id:'p46',name:'Nivel',cat:'Medición',qty:3,emoji:'🔲',bg:'#0a2a2a'},
+  {id:'p47',name:'Vernier',cat:'Medición',qty:4,emoji:'🔭',bg:'#0a2a2a'},
+  // Operaciones mecánicas
+  {id:'p48',name:'Desarmador',cat:'Mecánica',qty:8,emoji:'🔧',bg:'#2a0a1a'},
+  {id:'p49',name:'Rotomartillo',cat:'Mecánica',qty:2,emoji:'🔨',bg:'#2a0a1a'},
+  {id:'p50',name:'Llaves Allen',cat:'Mecánica',qty:5,emoji:'🔑',bg:'#2a0a1a'},
+  {id:'p51',name:'Pinzas de punta',cat:'Mecánica',qty:5,emoji:'🦾',bg:'#2a0a1a'},
+  {id:'p52',name:'Pinzas de corte',cat:'Mecánica',qty:4,emoji:'✂️',bg:'#2a0a1a'},
+  {id:'p53',name:'Pinzas de presión',cat:'Mecánica',qty:4,emoji:'🦾',bg:'#2a0a1a'},
+  {id:'p54',name:'Pinzas de electricista',cat:'Mecánica',qty:4,emoji:'⚡',bg:'#2a0a1a'},
+  {id:'p55',name:'Llaves mecánicas',cat:'Mecánica',qty:4,emoji:'🔑',bg:'#2a0a1a'},
+  // Maquinados
+  {id:'p56',name:'Llaves para taladros',cat:'Maquinados',qty:3,emoji:'🔑',bg:'#1a0a2a'},
+  {id:'p57',name:'Llaves para fresa',cat:'Maquinados',qty:3,emoji:'🔑',bg:'#1a0a2a'},
+  {id:'p58',name:'Endmill',cat:'Maquinados',qty:5,emoji:'⚙️',bg:'#1a0a2a'},
+];
+
+const COMBOS = [
+  {id:'c1',name:'Kit Taladrado',emoji:'🔨',desc:'Todo para perforar y taladrar',items:['p12','p14','p09','p17','p18']},
+  {id:'c2',name:'Kit Soldadura',emoji:'🔥',desc:'Estación completa de soldadura',items:['p19','p20','p21','p22','p23']},
+  {id:'c3',name:'Instrumentos A',emoji:'⚡',desc:'Fuente de poder con cables',items:['p24','p25','p26']},
+  {id:'c4',name:'Instrumentos B',emoji:'📺',desc:'Osciloscopio listo para usar',items:['p27','p28']},
+  {id:'c5',name:'Instrumentos C',emoji:'📡',desc:'Generador de funciones completo',items:['p29','p30']},
+  {id:'c6',name:'Kit Cortes',emoji:'🪚',desc:'Para corte de materiales',items:['p31','p09','p10','p11']},
+  {id:'c7',name:'Kit Medición',emoji:'📏',desc:'Todo para medir con precisión',items:['p44','p08','p47','p45']},
+  {id:'c8',name:'Kit Mecánico',emoji:'🔧',desc:'Operaciones mecánicas generales',items:['p48','p50','p51','p55']},
+];
+
+// ============================
+// STATE & LOCALSTORAGE
+// ============================
+let products = JSON.parse(localStorage.getItem('lm_products') || 'null') || INITIAL_PRODUCTS.map(p=>({...p,available:p.qty}));
+let users = JSON.parse(localStorage.getItem('lm_users') || '[]');
+let loans = JSON.parse(localStorage.getItem('lm_loans') || '[]');
+let currentUser = JSON.parse(localStorage.getItem('lm_current') || 'null');
+let isAdmin = localStorage.getItem('lm_admin') === '1';
+let cart = [];
+
+function save(){
+  localStorage.setItem('lm_products', JSON.stringify(products));
+  localStorage.setItem('lm_users', JSON.stringify(users));
+  localStorage.setItem('lm_loans', JSON.stringify(loans));
+}
+
+// ============================
+// VIEWS
+// ============================
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+}
+
+function doLogin(){
+  const mat = document.getElementById('login-mat').value.trim().toUpperCase();
+  const err = document.getElementById('login-error');
+  const user = users.find(u=>u.matricula.toUpperCase()===mat);
+  if(!user){err.style.display='block';return;}
+  err.style.display='none';
+  currentUser = user;
+  localStorage.setItem('lm_current', JSON.stringify(user));
+  initStore();
+  showView('store');
+}
+
+function doAdminLogin(){
+  const pass = document.getElementById('admin-pass').value;
+  const err = document.getElementById('admin-error');
+  if(pass !== ADMIN_PASSWORD){err.style.display='block';return;}
+  err.style.display='none';
+  isAdmin = true;
+  localStorage.setItem('lm_admin','1');
+  initAdmin();
+  showView('admin');
+}
+
+function toggleAdminField(){
+  const f = document.getElementById('admin-field');
+  f.style.display = f.style.display==='block' ? 'none' : 'block';
+}
+
+function doRegister(){
+  const nombre = document.getElementById('reg-nombre').value.trim();
+  const mat = document.getElementById('reg-mat').value.trim().toUpperCase();
+  const correo = document.getElementById('reg-correo').value.trim();
+  const clase = document.getElementById('reg-clase').value.trim();
+  const maestro = document.getElementById('reg-maestro').value.trim();
+  const err = document.getElementById('reg-error');
+  if(!nombre||!mat||!correo||!clase||!maestro){err.textContent='Por favor completa todos los campos';err.style.display='block';return;}
+  if(users.find(u=>u.matricula===mat)){err.textContent='Esa matrícula ya está registrada';err.style.display='block';return;}
+  const user = {matricula:mat,nombre,correo,clase,maestro,createdAt:new Date().toLocaleDateString('es-MX')};
+  users.push(user);
+  save();
+  err.style.display='none';
+  showToast('✅ ¡Cuenta creada! Ya puedes iniciar sesión','success');
+  setTimeout(()=>showView('login'),1200);
+}
+
+function doLogout(){
+  currentUser=null; isAdmin=false; cart=[];
+  localStorage.removeItem('lm_current');
+  localStorage.removeItem('lm_admin');
+  showView('login');
+}
+
+// ============================
+// STORE
+// ============================
+let activeCategory = 'Todos';
+
+function initStore(){
+  const u = currentUser;
+  document.getElementById('user-avatar').textContent = u.nombre[0].toUpperCase();
+  document.getElementById('user-name-display').textContent = u.nombre.split(' ')[0];
+  renderCombos();
+  renderCategoryFilters();
+  renderProducts('Todos');
+  updateLoansDot();
+}
+
+function renderCombos(){
+  const c = document.getElementById('combos-container');
+  c.innerHTML = COMBOS.map(combo=>{
+    const items = combo.items.map(id=>{const p=products.find(x=>x.id===id);return p?p.name:'?'});
+    return `<div class="combo-card">
+      <div class="combo-icon">${combo.emoji}</div>
+      <div class="combo-name">${combo.name}</div>
+      <div class="combo-desc">${combo.desc}</div>
+      <div class="combo-items-list">${items.map(i=>`<span class="combo-tag">${i}</span>`).join('')}</div>
+      <button class="btn-combo" onclick="addCombo('${combo.id}')">+ Agregar Kit</button>
+    </div>`;
+  }).join('');
+}
+
+function renderCategoryFilters(){
+  const cats = ['Todos',...new Set(products.map(p=>p.cat))];
+  const f = document.getElementById('cat-filters');
+  f.innerHTML = cats.map(c=>`<button class="cat-btn${c==='Todos'?' active':''}" onclick="filterCat('${c}',this)">${c}</button>`).join('');
+}
+
+function filterCat(cat, btn){
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = cat;
+  renderProducts(cat);
+}
+
+function renderProducts(cat){
+  const filtered = cat==='Todos' ? products : products.filter(p=>p.cat===cat);
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = filtered.map(p=>{
+    const inCart = cart.find(c=>c.id===p.id);
+    const avail = p.available;
+    let qtyLabel = `<span class="qty-badge">${avail} disp.</span>`;
+    if(avail===0) qtyLabel=`<span class="qty-badge out">Agotado</span>`;
+    else if(avail<=2) qtyLabel=`<span class="qty-badge low">${avail} disp.</span>`;
+    return `<div class="product-card${avail===0?' out-of-stock':''}">
+      <div class="product-img" style="background:${p.bg}">
+        ${p.emoji}${qtyLabel}
+      </div>
+      <div class="product-body">
+        <div class="product-cat">${p.cat}</div>
+        <div class="product-name">${p.name}</div>
+        <button class="btn-add${inCart?' added':''}" onclick="toggleCartItem('${p.id}')">
+          ${inCart?'✓ En carrito':'+ Agregar'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCartItem(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  const idx = cart.findIndex(c=>c.id===id);
+  if(idx>-1){cart.splice(idx,1);showToast('Removido del carrito','info');}
+  else{cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});showToast(`${p.emoji} Agregado al carrito`,'success');}
+  updateCartUI();
+  renderProducts(activeCategory);
+}
+
+function addCombo(comboId){
+  const combo = COMBOS.find(c=>c.id===comboId);
+  if(!combo) return;
+  let added = 0;
+  combo.items.forEach(pid=>{
+    const p = products.find(x=>x.id===pid);
+    if(p && p.available>0 && !cart.find(c=>c.id===pid)){
+      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});
+      added++;
+    }
+  });
+  showToast(`✅ Kit ${combo.name} agregado (${added} artículos)`,'success');
+  updateCartUI();
+  renderProducts(activeCategory);
+}
+
+function updateCartUI(){
+  const total = cart.reduce((s,i)=>s+i.qty,0);
+  const countEl = document.getElementById('cart-count');
+  countEl.textContent = total;
+  countEl.classList.toggle('show', total>0);
+  document.getElementById('reserve-btn').disabled = total===0;
+  renderCartItems();
+}
+
+function renderCartItems(){
+  const list = document.getElementById('cart-items-list');
+  if(cart.length===0){
+    list.innerHTML='<div class="cart-empty"><div class="empty-icon">📭</div><p>Tu carrito está vacío</p></div>';
+    document.getElementById('cart-total-items').textContent='0';
+    return;
+  }
+  list.innerHTML = cart.map(item=>`
+    <div class="cart-item">
+      <div class="cart-item-icon">${item.emoji}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-cat">${item.cat}</div>
+        <div class="cart-item-qty">
+          <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+        </div>
+      </div>
+      <button class="cart-remove" onclick="removeFromCart('${item.id}')">🗑️</button>
+    </div>`).join('');
+  document.getElementById('cart-total-items').textContent = cart.reduce((s,i)=>s+i.qty,0);
+}
+
+function changeQty(id, delta){
+  const item = cart.find(c=>c.id===id);
+  const prod = products.find(p=>p.id===id);
+  if(!item) return;
+  item.qty = Math.max(1, Math.min(item.qty+delta, prod.available));
+  updateCartUI();
+}
+
+function removeFromCart(id){
+  cart = cart.filter(c=>c.id!==id);
+  updateCartUI();
+  renderProducts(activeCategory);
+}
+
+function openCart(){
+  document.getElementById('cart-overlay').classList.add('open');
+  document.getElementById('cart-sidebar').classList.add('open');
+  renderCartItems();
+}
+function closeCart(){
+  document.getElementById('cart-overlay').classList.remove('open');
+  document.getElementById('cart-sidebar').classList.remove('open');
+}
+
+// ============================
+// RESERVE
+// ============================
+function openReserveModal(){
+  const list = document.getElementById('confirm-items-list');
+  list.innerHTML = cart.map(i=>`<div class="confirm-item"><span>${i.emoji} ${i.name}</span><span>×${i.qty}</span></div>`).join('');
+  document.getElementById('reserve-modal').classList.add('open');
+}
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+
+function confirmReserve(){
+  const loan = {
+    id: 'L'+Date.now(),
+    userId: currentUser.matricula,
+    userName: currentUser.nombre,
+    correo: currentUser.correo,
+    clase: currentUser.clase,
+    maestro: currentUser.maestro,
+    items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
+    date: new Date().toLocaleDateString('es-MX'),
+    status: 'prestado',
+    returnDate: null
+  };
+  // Reduce available
+  cart.forEach(i=>{
+    const p = products.find(x=>x.id===i.id);
+    if(p) p.available = Math.max(0, p.available-i.qty);
+  });
+  loans.push(loan);
+  cart = [];
+  save();
+  closeModal('reserve-modal');
+  closeCart();
+  updateCartUI();
+  renderProducts(activeCategory);
+  updateLoansDot();
+  showToast('🎉 ¡Reserva confirmada! Pasa al almacén A7-236','success');
+}
+
+// ============================
+// ADMIN
+// ============================
+function initAdmin(){
+  renderAdminStats();
+  renderLoansTable();
+  renderHistoryTable();
+  renderInventoryGrid();
+  renderUsersGrid();
+}
+
+function renderAdminStats(){
+  const total = products.reduce((s,p)=>s+p.qty,0);
+  const active = loans.filter(l=>l.status==='prestado').length;
+  const returned = loans.filter(l=>l.status==='devuelto').length;
+  const totalUsers = users.length;
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total Artículos</div></div>
+    <div class="stat-card"><div class="stat-num warn">${active}</div><div class="stat-label">Préstamos Activos</div></div>
+    <div class="stat-card"><div class="stat-num green">${returned}</div><div class="stat-label">Devueltos</div></div>
+    <div class="stat-card"><div class="stat-num">${totalUsers}</div><div class="stat-label">Alumnos Registrados</div></div>
+  `;
+}
+
+function renderLoansTable(search=''){
+  const active = loans.filter(l=>l.status==='prestado');
+  const filtered = search ? active.filter(l=>l.userName.toLowerCase().includes(search.toLowerCase())||l.userId.toLowerCase().includes(search.toLowerCase())) : active;
+  const tbody = document.getElementById('loans-tbody');
+  if(filtered.length===0){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No hay préstamos activos</td></tr>`;return;}
+  tbody.innerHTML = filtered.map(l=>`<tr>
+    <td><strong>${l.userName}</strong></td>
+    <td><span class="highlight">${l.userId}</span></td>
+    <td style="color:var(--muted)">${l.clase}</td>
+    <td>${l.items.map(i=>`<span style="margin-right:4px">${i.emoji}${i.name}(×${i.qty})</span>`).join(', ')}</td>
+    <td style="color:var(--muted)">${l.date}</td>
+    <td><span class="status-badge status-prestado">● Prestado</span></td>
+    <td><button class="btn-sm btn-return" onclick="returnLoan('${l.id}')">✓ Devuelto</button></td>
+  </tr>`).join('');
+}
+
+function renderHistoryTable(search=''){
+  const filtered = search ? loans.filter(l=>l.userName.toLowerCase().includes(search.toLowerCase())||l.userId.toLowerCase().includes(search.toLowerCase())) : loans;
+  const tbody = document.getElementById('history-tbody');
+  if(filtered.length===0){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Sin registros aún</td></tr>`;return;}
+  tbody.innerHTML = [...filtered].reverse().map(l=>`<tr>
+    <td><strong>${l.userName}</strong></td>
+    <td><span class="highlight">${l.userId}</span></td>
+    <td style="color:var(--muted);font-size:11px">${l.correo}</td>
+    <td style="color:var(--muted)">${l.maestro}</td>
+    <td>${l.items.map(i=>`${i.emoji}${i.name}`).join(', ')}</td>
+    <td style="color:var(--muted)">${l.date}</td>
+    <td style="color:var(--muted)">${l.returnDate||'—'}</td>
+    <td><span class="status-badge status-${l.status}">● ${l.status==='prestado'?'Prestado':'Devuelto'}</span></td>
+  </tr>`).join('');
+}
+
+function renderInventoryGrid(){
+  const grid = document.getElementById('inventory-grid');
+  grid.innerHTML = products.map(p=>{
+    const cls = p.available===0?'out':p.available<=2?'low':'ok';
+    return `<div class="inv-card">
+      <div class="inv-icon">${p.emoji}</div>
+      <div class="inv-info">
+        <div class="inv-name">${p.name}</div>
+        <div class="inv-cat">${p.cat}</div>
+        <div class="inv-qty-row">
+          <input class="inv-qty-input" type="number" min="0" value="${p.qty}" data-id="${p.id}" data-field="qty">
+          <span class="inv-total">total</span>
+        </div>
+        <div class="inv-avail ${cls}">Disponibles: ${p.available}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveInventory(){
+  document.querySelectorAll('.inv-qty-input').forEach(input=>{
+    const id = input.getAttribute('data-id');
+    const val = parseInt(input.value)||0;
+    const p = products.find(x=>x.id===id);
+    if(p){
+      const diff = val - p.qty;
+      p.qty = val;
+      p.available = Math.max(0, p.available + diff);
+    }
+  });
+  save();
+  renderInventoryGrid();
+  renderAdminStats();
+  showToast('💾 Inventario guardado','success');
+}
+
+function renderUsersGrid(){
+  const grid = document.getElementById('users-grid');
+  if(users.length===0){grid.innerHTML='<p style="color:var(--muted);font-size:13px">No hay usuarios registrados aún</p>';return;}
+  grid.innerHTML = users.map(u=>{
+    const userLoans = loans.filter(l=>l.userId===u.matricula).length;
+    return `<div class="user-card">
+      <div class="user-avatar">${u.nombre[0].toUpperCase()}</div>
+      <div class="user-info">
+        <div class="user-name">${u.nombre}</div>
+        <div class="user-mat">${u.matricula}</div>
+        <div class="user-meta">${u.clase} · ${u.maestro}</div>
+        <div class="user-meta" style="margin-top:2px">${u.correo}</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--accent)">${userLoans} préstamo${userLoans!==1?'s':''} registrado${userLoans!==1?'s':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function returnLoan(loanId){
+  const loan = loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  loan.status = 'devuelto';
+  loan.returnDate = new Date().toLocaleDateString('es-MX');
+  // Restore availability
+  loan.items.forEach(i=>{
+    const p = products.find(x=>x.id===i.id);
+    if(p) p.available = Math.min(p.qty, p.available+i.qty);
+  });
+  save();
+  renderAdminStats();
+  renderLoansTable();
+  renderHistoryTable();
+  renderInventoryGrid();
+  showToast('✅ Material marcado como devuelto','success');
+}
+
+function showAdminTab(tab){
+  document.querySelectorAll('.admin-tab').forEach((t,i)=>{
+    t.classList.remove('active');
+  });
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
+  const tabs = ['loans','history','inventory','users'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.admin-tab')[idx].classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+// ============================
+// LOANS SIDEBAR (USER)
+// ============================
+function openLoans(){
+  renderLoansBody();
+  document.getElementById('loans-overlay').classList.add('open');
+  document.getElementById('loans-sidebar').classList.add('open');
+}
+function closeLoans(){
+  document.getElementById('loans-overlay').classList.remove('open');
+  document.getElementById('loans-sidebar').classList.remove('open');
+}
+function renderLoansBody(){
+  const myLoans = loans.filter(l=>l.userId===currentUser.matricula);
+  const body = document.getElementById('loans-body');
+  if(myLoans.length===0){
+    body.innerHTML=`<div class="loans-empty"><div class="empty-icon">📭</div><p>Aún no tienes préstamos registrados</p></div>`;
+    return;
+  }
+  body.innerHTML = [...myLoans].reverse().map(l=>{
+    const isActive = l.status==='prestado';
+    return `<div class="loan-card">
+      <div class="loan-card-head">
+        <span class="status-badge status-${l.status}">● ${isActive?'Prestado':'Devuelto'}</span>
+        <span class="loan-date">📅 ${l.date}</span>
+      </div>
+      <div class="loan-items-grid">
+        ${l.items.map(i=>`<div class="loan-item-chip">${i.emoji} ${i.name} <span>×${i.qty}</span></div>`).join('')}
+      </div>
+      <div class="loan-footer-row">
+        <span class="loan-id">ID: ${l.id}</span>
+        ${isActive
+          ? `<span style="font-size:11px;color:var(--warn)">⏳ Pendiente de devolución</span>`
+          : `<span style="font-size:11px;color:var(--success)">✓ Devuelto el ${l.returnDate}</span>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateLoansDot(){
+  const active = loans.filter(l=>l.userId===currentUser?.matricula && l.status==='prestado').length;
+  document.getElementById('loans-dot')?.classList.toggle('show', active>0);
+}
+
+// ============================
+// TOAST
+// ============================
+let toastTimer;
+function showToast(msg, type='info'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ============================
+// INIT
+// ============================
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('view-login').classList.contains('active')) doLogin();
+    if(document.getElementById('view-register').classList.contains('active')) doRegister();
+  }
+});
+
+// Auto-login if session exists
+if(isAdmin){initAdmin();showView('admin');}
+else if(currentUser){initStore();showView('store');}
+else{showView('login');}
+</script>
+</body>
+</html>
