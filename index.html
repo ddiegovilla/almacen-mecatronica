@@ -146,25 +146,28 @@ body::before{
 .combos-scroll::-webkit-scrollbar{height:3px}
 .combo-card{
   flex:0 0 240px;background:linear-gradient(135deg,var(--bg3),var(--card));
-  border:1px solid var(--border);border-radius:var(--r2);padding:20px;cursor:pointer;
+  border:1px solid var(--border);border-radius:var(--r2);padding:20px;
   transition:all .25s;position:relative;overflow:hidden;
 }
 .combo-card::before{
   content:'';position:absolute;inset:0;
   background:linear-gradient(135deg,rgba(0,194,255,.05),transparent);
   opacity:0;transition:opacity .25s;
+  pointer-events:none;
+  z-index:0;
 }
 .combo-card:hover{transform:translateY(-3px);border-color:rgba(0,194,255,.4);box-shadow:0 12px 32px rgba(0,194,255,.1)}
 .combo-card:hover::before{opacity:1}
-.combo-icon{font-size:32px;margin-bottom:12px}
-.combo-name{font-weight:700;font-size:15px;margin-bottom:6px}
-.combo-desc{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5}
-.combo-items-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.combo-icon{font-size:32px;margin-bottom:12px;position:relative;z-index:1}
+.combo-name{font-weight:700;font-size:15px;margin-bottom:6px;position:relative;z-index:1}
+.combo-desc{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5;position:relative;z-index:1}
+.combo-items-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;position:relative;z-index:1}
 .combo-tag{background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.15);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--accent)}
 .btn-combo{
   width:100%;padding:9px;border:1px solid var(--accent);border-radius:var(--r);
   background:rgba(0,194,255,.08);color:var(--accent);font-family:'Outfit',sans-serif;
   font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;
+  position:relative;z-index:2;
 }
 .btn-combo:hover{background:var(--accent);color:#000}
 .btn-combo-reserve{background:rgba(0,194,255,.15);border-color:var(--accent)}
@@ -1024,6 +1027,9 @@ function addCombo(comboId){
     showToast('⚠️ Todos los artículos del kit ya están en tu carrito o sin stock','error');
   } else {
     showToast(`✅ Kit ${combo.name} agregado — ${added} artículo${added!==1?'s':''}`, 'success');
+    updateCartUI();
+    renderProducts(activeCategory);
+    openCart();
   }
   updateCartUI();
   renderProducts(activeCategory);
