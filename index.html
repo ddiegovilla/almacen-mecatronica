@@ -166,6 +166,10 @@ body::before{
   font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;
 }
 .btn-combo:hover{background:var(--accent);color:#000}
+.btn-combo-reserve{background:rgba(0,194,255,.15);border-color:var(--accent)}
+.btn-combo-reserve:hover{background:var(--accent);color:#000}
+.btn-combo-reserve:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.combo-tag-out{opacity:.4;text-decoration:line-through}
 
 /* Category filters */
 .cat-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
@@ -835,15 +839,41 @@ function initStore(){
 function renderCombos(){
   const c = document.getElementById('combos-container');
   c.innerHTML = COMBOS.map(combo=>{
-    const items = combo.items.map(id=>{const p=products.find(x=>x.id===id);return p?p.name:'?'});
-    return `<div class="combo-card">
-      <div class="combo-icon">${combo.emoji}</div>
-      <div class="combo-name">${combo.name}</div>
-      <div class="combo-desc">${combo.desc}</div>
-      <div class="combo-items-list">${items.map(i=>`<span class="combo-tag">${i}</span>`).join('')}</div>
-      <button class="btn-combo" onclick="addCombo('${combo.id}')">+ Agregar Kit</button>
-    </div>`;
+    const itemsData = combo.items.map(id=>products.find(x=>x.id===id)).filter(Boolean);
+    const allAvail = itemsData.every(p=>p.available>0);
+    const someUnavail = itemsData.some(p=>p.available===0);
+    const tagsHtml = itemsData.map(p=>{
+      const outCls = p.available===0?' combo-tag-out':'';
+      return '<span class="combo-tag'+outCls+'">'+p.emoji+' '+p.name+' <span style="opacity:.6;font-size:9px">('+p.available+' disp.)</span></span>';
+    }).join('');
+    const warnHtml = someUnavail ? '<div style="font-size:10px;color:var(--warn);margin-bottom:8px">⚠️ Algunos artículos sin stock</div>' : '';
+    const disabledAttr = allAvail ? '' : ' disabled title="Stock insuficiente"';
+    return '<div class="combo-card">'
+      +'<div class="combo-icon">'+combo.emoji+'</div>'
+      +'<div class="combo-name">'+combo.name+'</div>'
+      +'<div class="combo-desc">'+combo.desc+'</div>'
+      +'<div class="combo-items-list">'+tagsHtml+'</div>'
+      +warnHtml
+      +'<div style="display:flex;gap:6px;margin-top:4px">'
+      +'<button class="btn-combo" style="flex:1" onclick="addCombo(''+combo.id+'')">+ Al carrito</button>'
+      +'<button class="btn-combo btn-combo-reserve" style="flex:1"'+disabledAttr+' onclick="reserveCombo(''+combo.id+'')">⚡ Reservar ya</button>'
+      +'</div>'
+      +'</div>';
   }).join('');
+}
+
+function reserveCombo(comboId){
+  const combo = COMBOS.find(c=>c.id===comboId);
+  if(!combo) return;
+  combo.items.forEach(pid=>{
+    const p = products.find(x=>x.id===pid);
+    if(p && p.available>0 && !cart.find(c=>c.id===pid)){
+      cart.push({id:p.id,name:p.name,cat:p.cat,emoji:p.emoji,qty:1});
+    }
+  });
+  updateCartUI();
+  renderProducts(activeCategory);
+  openReserveModal();
 }
 
 function renderCategoryFilters(){
