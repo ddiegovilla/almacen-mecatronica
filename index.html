@@ -395,6 +395,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;
 }
 .btn-return{background:rgba(0,214,122,.12);color:var(--success);border:1px solid rgba(0,214,122,.25)}
+.btn-return-disabled{opacity:.35;cursor:not-allowed;background:rgba(100,100,100,.1);color:var(--muted);border-color:var(--border)}
 .btn-return:hover{background:var(--success);color:#000}
 .btn-edit{background:rgba(0,194,255,.1);color:var(--accent);border:1px solid rgba(0,194,255,.2)}
 .btn-edit:hover{background:var(--accent);color:#000}
@@ -534,14 +535,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <label>Correo Institucional</label>
       <input type="email" id="reg-correo" placeholder="Ej. a01234567@tec.mx">
     </div>
-    <div class="form-group">
-      <label>Clase / Materia</label>
-      <input type="text" id="reg-clase" placeholder="Ej. Mecatrónica 3, Robótica...">
-    </div>
-    <div class="form-group">
-      <label>Maestro</label>
-      <input type="text" id="reg-maestro" placeholder="Ej. Dr. Juan López">
-    </div>
     <div id="reg-error" class="error-msg">Por favor completa todos los campos</div>
     <button class="btn btn-primary" onclick="doRegister()">Crear Cuenta</button>
     <p class="auth-footer">¿Ya tienes cuenta? <a onclick="showView('login')">Inicia sesión</a></p>
@@ -614,8 +607,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="modal-close" onclick="closeModal('reserve-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--muted)">Estás a punto de reservar los siguientes materiales:</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Estás a punto de reservar los siguientes materiales:</p>
       <div class="confirm-items" id="confirm-items-list"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Clase / Materia</label>
+          <input type="text" id="reserve-clase" placeholder="Ej. Mecatrónica 3">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Maestro</label>
+          <input type="text" id="reserve-maestro" placeholder="Ej. Dr. Juan López">
+        </div>
+      </div>
+      <div id="reserve-fields-error" class="error-msg" style="margin-bottom:8px">Por favor completa clase y maestro</div>
       <div class="confirm-note">⚠️ Recuerda pasar al almacén A7-236 a recoger tus materiales y firmar el préstamo.</div>
     </div>
     <div class="modal-foot">
@@ -654,7 +658,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <input class="search-input" placeholder="🔍 Buscar alumno..." oninput="renderLoansTable(this.value)">
       </div>
       <div class="table-wrap"><table id="loans-table">
-        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Clase</th><th>Materiales</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
+        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Clase</th><th>Maestro</th><th>Materiales</th><th>Fecha</th><th>Estado</th><th>Prestado por</th><th>Acción</th></tr></thead>
         <tbody id="loans-tbody"></tbody>
       </table></div>
     </div>
@@ -668,7 +672,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <input class="search-input" placeholder="🔍 Buscar..." oninput="renderHistoryTable(this.value)">
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Correo</th><th>Maestro</th><th>Materiales</th><th>Fecha Préstamo</th><th>Fecha Devolución</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Alumno</th><th>Matrícula</th><th>Correo</th><th>Clase</th><th>Maestro</th><th>Prestado por</th><th>Materiales</th><th>Fecha Préstamo</th><th>Fecha Devolución</th><th>Estado</th></tr></thead>
         <tbody id="history-tbody"></tbody>
       </table></div>
     </div>
@@ -712,7 +716,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
       </div>
       <!-- Info preview -->
-      <div id="admin-loan-user-info" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:14px;font-size:12px;color:var(--muted)"></div>
+      <div id="admin-loan-user-info" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--muted)"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Clase / Materia</label>
+          <input type="text" id="admin-loan-clase" placeholder="Ej. Mecatrónica 3">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Maestro del alumno</label>
+          <input type="text" id="admin-loan-maestro" placeholder="Ej. Dr. Juan López">
+        </div>
+      </div>
       <!-- Selected items -->
       <label style="font-size:12px;font-weight:600;letter-spacing:.8px;color:var(--muted);text-transform:uppercase">Materiales Seleccionados</label>
       <div class="selected-items-list" id="admin-selected-items"><span style="color:var(--muted);font-size:12px">Ningún material seleccionado aún...</span></div>
@@ -889,8 +903,8 @@ async function loadUsers(){
   // Seed 2 test users if none exist
   if(users.length===0){
     const testUsers = [
-      {matricula:'A01111111',nombre:'Carlos Ramírez Vega',correo:'a01111111@tec.mx',clase:'Mecatrónica 3',maestro:'Dr. López',createdAt:nowStamp()},
-      {matricula:'A02222222',nombre:'Sofía Torres Mendoza',correo:'a02222222@tec.mx',clase:'Robótica Aplicada',maestro:'Dra. García',createdAt:nowStamp()},
+      {matricula:'A01111111',nombre:'Carlos Ramírez Vega',correo:'a01111111@tec.mx',createdAt:nowStamp()},
+      {matricula:'A02222222',nombre:'Sofía Torres Mendoza',correo:'a02222222@tec.mx',createdAt:nowStamp()},
     ];
     const batch = db.batch();
     testUsers.forEach(u=>{
@@ -949,14 +963,12 @@ async function doRegister(){
   const nombre  = document.getElementById('reg-nombre').value.trim();
   const mat     = document.getElementById('reg-mat').value.trim().toUpperCase();
   const correo  = document.getElementById('reg-correo').value.trim();
-  const clase   = document.getElementById('reg-clase').value.trim();
-  const maestro = document.getElementById('reg-maestro').value.trim();
   const err = document.getElementById('reg-error');
-  if(!nombre||!mat||!correo||!clase||!maestro){err.textContent='Por favor completa todos los campos';err.style.display='block';return;}
+  if(!nombre||!mat||!correo){err.textContent='Por favor completa todos los campos';err.style.display='block';return;}
   showLoader('Creando cuenta...');
   const existing = await db.collection('users').doc(mat).get();
   if(existing.exists){hideLoader();err.textContent='Esa matrícula ya está registrada';err.style.display='block';return;}
-  const user = {matricula:mat,nombre,correo,clase,maestro,createdAt:nowStamp()};
+  const user = {matricula:mat,nombre,correo,createdAt:nowStamp()};
   await db.collection('users').doc(mat).set(user);
   hideLoader();
   err.style.display='none';
@@ -1186,16 +1198,24 @@ function updateLoansDot(){
 function openReserveModal(){
   const list = document.getElementById('confirm-items-list');
   list.innerHTML = cart.map(i=>`<div class="confirm-item"><span>${i.emoji} ${i.name}</span><span>×${i.qty}</span></div>`).join('');
+  document.getElementById('reserve-clase').value = '';
+  document.getElementById('reserve-maestro').value = '';
+  document.getElementById('reserve-fields-error').style.display = 'none';
   document.getElementById('reserve-modal').classList.add('open');
 }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 async function confirmReserve(){
+  const clase   = document.getElementById('reserve-clase').value.trim();
+  const maestro = document.getElementById('reserve-maestro').value.trim();
+  const ferr    = document.getElementById('reserve-fields-error');
+  if(!clase||!maestro){ferr.style.display='block';return;}
+  ferr.style.display='none';
   showLoader('Guardando reserva...');
   const loanId = 'L'+Date.now();
   const loan = {
     id:loanId, userId:currentUser.matricula, userName:currentUser.nombre,
-    correo:currentUser.correo, clase:currentUser.clase, maestro:currentUser.maestro,
+    correo:currentUser.correo, clase, maestro,
     items:cart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
     date:nowStamp(), status:'prestado', returnDate:null, createdByAdmin:false
   };
@@ -1238,20 +1258,51 @@ function renderAdminStats(){
     <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Alumnos Registrados</div></div>`;
 }
 
+const PRESTADORES = [
+  'Ing. Sofia Esther Cortes Camacho',
+  'Ing. Raul Antonio Contreras Ibarra',
+];
+
 function renderLoansTable(search=''){
   const active   = loans.filter(l=>l.status==='prestado');
   const filtered = search ? active.filter(l=>l.userName.toLowerCase().includes(search.toLowerCase())||l.userId.toLowerCase().includes(search.toLowerCase())) : active;
   const tbody = document.getElementById('loans-tbody');
-  if(filtered.length===0){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No hay préstamos activos</td></tr>`;return;}
-  tbody.innerHTML = filtered.map(l=>`<tr>
-    <td><strong>${l.userName}</strong></td>
-    <td><span class="highlight">${l.userId}</span></td>
-    <td style="color:var(--muted)">${l.clase}</td>
-    <td><div class="items-cell">${l.items.map(i=>`<span class="item-chip">${i.emoji} ${i.name}<span class="chip-qty">×${i.qty}</span></span>`).join('')}</div></td>
-    <td style="color:var(--muted);white-space:nowrap;font-size:12px">${l.date}</td>
-    <td><span class="status-badge status-prestado">● Prestado</span></td>
-    <td><button class="btn-sm btn-return" onclick="returnLoan('${l.id}')">✓ Devuelto</button></td>
-  </tr>`).join('');
+  if(filtered.length===0){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">No hay préstamos activos</td></tr>`;return;}
+  tbody.innerHTML = filtered.map(l=>{
+    const prestadorOpts = PRESTADORES.map(p=>`<option value="${p}" ${l.prestadoPor===p?'selected':''}>${p}</option>`).join('');
+    const hasPrestador = !!l.prestadoPor;
+    return `<tr>
+      <td><strong>${l.userName}</strong></td>
+      <td><span class="highlight">${l.userId}</span></td>
+      <td style="color:var(--muted);font-size:12px">${l.clase||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${l.maestro||'—'}</td>
+      <td><div class="items-cell">${l.items.map(i=>`<span class="item-chip">${i.emoji} ${i.name}<span class="chip-qty">×${i.qty}</span></span>`).join('')}</div></td>
+      <td style="color:var(--muted);white-space:nowrap;font-size:12px">${l.date}</td>
+      <td><span class="status-badge status-prestado">● Prestado</span></td>
+      <td>
+        <select class="prestador-select" onchange="setPrestador('${l.id}',this.value)" style="background:var(--bg2);border:1px solid ${hasPrestador?'var(--border)':'var(--warn)'};border-radius:6px;padding:5px 8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;outline:none;min-width:160px">
+          <option value="">— ¿Quién lo presta? —</option>
+          ${prestadorOpts}
+        </select>
+        ${!hasPrestador?'<div style="font-size:10px;color:var(--warn);margin-top:3px">⚠️ Requerido</div>':''}
+      </td>
+      <td>
+        <button class="btn-sm btn-return${!hasPrestador?' btn-return-disabled':''}"
+          onclick="${hasPrestador?`returnLoan('${l.id}')`:`showToast('⚠️ Selecciona quién lo prestó primero','error')`}">
+          ✓ Devuelto
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function setPrestador(loanId, prestador){
+  const loan = loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  loan.prestadoPor = prestador;
+  // persist to firestore async
+  if(prestador) db.collection('loans').doc(loanId).update({prestadoPor: prestador});
+  renderLoansTable();
 }
 
 function renderHistoryTable(search=''){
@@ -1261,11 +1312,13 @@ function renderHistoryTable(search=''){
   tbody.innerHTML = [...filtered].reverse().map(l=>`<tr>
     <td><strong>${l.userName}</strong></td>
     <td><span class="highlight">${l.userId}</span></td>
-    <td style="color:var(--muted);font-size:11px">${l.correo}</td>
-    <td style="color:var(--muted)">${l.maestro}</td>
-    <td>${l.items.map(i=>`${i.emoji} ${i.name}`).join(', ')}</td>
-    <td style="color:var(--muted)">${l.date}</td>
-    <td style="color:var(--muted)">${l.returnDate||'—'}</td>
+    <td style="color:var(--muted);font-size:11px">${l.correo||'—'}</td>
+    <td style="color:var(--muted);font-size:12px">${l.clase||'—'}</td>
+    <td style="color:var(--muted);font-size:12px">${l.maestro||'—'}</td>
+    <td style="color:var(--muted);font-size:12px">${l.prestadoPor||'—'}</td>
+    <td style="font-size:12px">${l.items.map(i=>`${i.emoji} ${i.name}`).join(', ')}</td>
+    <td style="color:var(--muted);font-size:12px">${l.date}</td>
+    <td style="color:var(--muted);font-size:12px">${l.returnDate||'—'}</td>
     <td><span class="status-badge status-${l.status}">● ${l.status==='prestado'?'Prestado':'Devuelto'}</span></td>
   </tr>`).join('');
 }
@@ -1319,7 +1372,6 @@ function renderUsersGrid(){
       <div class="user-info">
         <div class="user-name">${u.nombre}</div>
         <div class="user-mat">${u.matricula}</div>
-        <div class="user-meta">${u.clase} · ${u.maestro}</div>
         <div class="user-meta" style="margin-top:2px">${u.correo}</div>
         <div style="font-size:11px;margin-top:4px;color:var(--accent)">${userLoans} préstamo${userLoans!==1?'s':''} registrado${userLoans!==1?'s':''}</div>
       </div>
@@ -1374,7 +1426,7 @@ document.addEventListener('change',function(e){
   if(e.target.id==='admin-loan-user'){
     const u = users.find(x=>x.matricula===e.target.value);
     const info = document.getElementById('admin-loan-user-info');
-    if(u){info.style.display='block';info.innerHTML=`📧 ${u.correo} &nbsp;|&nbsp; 📚 ${u.clase} &nbsp;|&nbsp; 👨‍🏫 ${u.maestro}`;}
+    if(u){info.style.display='block';info.innerHTML=`📧 ${u.correo}`;}
     else{info.style.display='none';}
   }
 });
@@ -1438,10 +1490,13 @@ async function confirmAdminLoan(){
   if(adminCart.length===0){showToast('⚠️ Agrega al menos un material','error');return;}
   showLoader('Registrando préstamo...');
   const u = users.find(x=>x.matricula===mat);
+  const adminClase   = document.getElementById('admin-loan-clase').value.trim();
+  const adminMaestro = document.getElementById('admin-loan-maestro').value.trim();
+  if(!adminClase||!adminMaestro){showToast('⚠️ Ingresa clase y maestro del alumno','error');hideLoader();return;}
   const loanId = 'L'+Date.now();
   const loan = {
     id:loanId, userId:u.matricula, userName:u.nombre, correo:u.correo,
-    clase:u.clase, maestro:u.maestro,
+    clase:adminClase, maestro:adminMaestro,
     items:adminCart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
     date:nowStamp(), status:'prestado', returnDate:null, createdByAdmin:true
   };
@@ -1470,14 +1525,16 @@ function exportToExcel(){
   if(typeof XLSX==='undefined'){showToast('Error: XLSX no cargado','error');return;}
   const rows = loans.map(l=>({
     'ID Préstamo':l.id,'Alumno':l.userName,'Matrícula':l.userId,
-    'Correo':l.correo,'Clase':l.clase,'Maestro':l.maestro,
+    'Correo':l.correo||'—',
+    'Clase':l.clase||'—','Maestro del alumno':l.maestro||'—',
+    'Prestado por':l.prestadoPor||'—',
     'Materiales':l.items.map(i=>i.name+' x'+i.qty).join(', '),
     'Fecha Préstamo':l.date,'Fecha Devolución':l.returnDate||'Pendiente',
     'Estado':l.status==='prestado'?'Prestado':'Devuelto',
     'Registrado por':l.createdByAdmin?'Admin':'Alumno'
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:14},{wch:24},{wch:12},{wch:26},{wch:20},{wch:20},{wch:50},{wch:20},{wch:20},{wch:12},{wch:14}];
+  ws['!cols']=[{wch:14},{wch:24},{wch:12},{wch:26},{wch:22},{wch:22},{wch:28},{wch:50},{wch:20},{wch:20},{wch:12},{wch:14}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Préstamos');
   const fecha=new Date().toLocaleDateString('es-MX').replace(/\//g,'-');
