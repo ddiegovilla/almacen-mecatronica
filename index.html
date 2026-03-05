@@ -234,6 +234,7 @@ body::before{
 .cart-item-qty{display:flex;align-items:center;gap:6px;margin-top:6px}
 .qty-btn{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px;transition:all .15s}
 .qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+.qty-btn-max{border-color:rgba(245,166,35,.4)!important;color:var(--warn)!important;cursor:not-allowed!important}
 .qty-num{font-size:13px;font-weight:700;min-width:20px;text-align:center}
 .cart-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
 .cart-remove:hover{color:var(--danger)}
@@ -404,7 +405,31 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .search-input:focus{border-color:var(--accent)}
 .table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
 
+.item-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(0,194,255,.07);border:1px solid rgba(0,194,255,.15);
+  border-radius:6px;padding:3px 8px;font-size:11px;margin:2px;white-space:nowrap;
+  color:var(--text);
+}
+.item-chip .chip-qty{
+  background:rgba(0,194,255,.18);color:var(--accent);
+  border-radius:4px;padding:1px 5px;font-weight:700;font-size:10px;margin-left:2px;
+}
+.items-cell{display:flex;flex-wrap:wrap;gap:0;max-width:320px}
+
 .highlight{color:var(--accent);font-weight:700}
+
+/* Item chips in loans table */
+.items-cell{display:flex;flex-wrap:wrap;gap:5px;max-width:340px}
+.item-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:4px 9px;font-size:12px;white-space:nowrap;
+}
+.chip-qty{
+  background:rgba(0,194,255,.15);border-radius:4px;
+  padding:1px 6px;font-size:10px;font-weight:700;color:var(--accent);
+}
 
 /* Responsive */
 @media(max-width:640px){
@@ -900,7 +925,10 @@ function renderCartItems(){
     document.getElementById('cart-total-items').textContent='0';
     return;
   }
-  list.innerHTML = cart.map(item=>`
+  list.innerHTML = cart.map(item=>{
+    const prod = products.find(p=>p.id===item.id);
+    const atMax = item.qty >= prod.available;
+    return `
     <div class="cart-item">
       <div class="cart-item-icon">${item.emoji}</div>
       <div class="cart-item-info">
@@ -909,11 +937,12 @@ function renderCartItems(){
         <div class="cart-item-qty">
           <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
           <span class="qty-num">${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+          <button class="qty-btn${atMax?' qty-btn-max':''}" onclick="changeQty('${item.id}',1)" title="${atMax?'Máximo disponible':''}">+</button>
+          <span style="font-size:10px;color:${atMax?'var(--warn)':'var(--muted)'}">/ ${prod.available}</span>
         </div>
       </div>
       <button class="cart-remove" onclick="removeFromCart('${item.id}')">🗑️</button>
-    </div>`).join('');
+    </div>`}).join('');
   document.getElementById('cart-total-items').textContent = cart.reduce((s,i)=>s+i.qty,0);
 }
 
@@ -921,7 +950,13 @@ function changeQty(id, delta){
   const item = cart.find(c=>c.id===id);
   const prod = products.find(p=>p.id===id);
   if(!item) return;
-  item.qty = Math.max(1, Math.min(item.qty+delta, prod.available));
+  const newQty = item.qty + delta;
+  if(newQty > prod.available){
+    showToast(`⚠️ Solo hay ${prod.available} disponible${prod.available!==1?'s':''} de "${prod.name}"`, 'error');
+    return;
+  }
+  if(newQty < 1) return;
+  item.qty = newQty;
   updateCartUI();
 }
 
@@ -954,6 +989,12 @@ function closeModal(id){
   document.getElementById(id).classList.remove('open');
 }
 
+function nowStamp(){
+  const d = new Date();
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})
+    + ' ' + d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
 function confirmReserve(){
   const loan = {
     id: 'L'+Date.now(),
@@ -963,7 +1004,7 @@ function confirmReserve(){
     clase: currentUser.clase,
     maestro: currentUser.maestro,
     items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,emoji:i.emoji})),
-    date: new Date().toLocaleDateString('es-MX'),
+    date: nowStamp(),
     status: 'prestado',
     returnDate: null
   };
@@ -1016,8 +1057,8 @@ function renderLoansTable(search=''){
     <td><strong>${l.userName}</strong></td>
     <td><span class="highlight">${l.userId}</span></td>
     <td style="color:var(--muted)">${l.clase}</td>
-    <td>${l.items.map(i=>`<span style="margin-right:4px">${i.emoji}${i.name}(×${i.qty})</span>`).join(', ')}</td>
-    <td style="color:var(--muted)">${l.date}</td>
+    <td><div class="items-cell">${l.items.map(i=>`<span class="item-chip">${i.emoji} ${i.name}<span class="chip-qty">×${i.qty}</span></span>`).join('')}</div></td>
+    <td style="color:var(--muted);white-space:nowrap;font-size:12px">${l.date}</td>
     <td><span class="status-badge status-prestado">● Prestado</span></td>
     <td><button class="btn-sm btn-return" onclick="returnLoan('${l.id}')">✓ Devuelto</button></td>
   </tr>`).join('');
@@ -1097,7 +1138,7 @@ function returnLoan(loanId){
   const loan = loans.find(l=>l.id===loanId);
   if(!loan) return;
   loan.status = 'devuelto';
-  loan.returnDate = new Date().toLocaleDateString('es-MX');
+  loan.returnDate = nowStamp();
   // Restore availability
   loan.items.forEach(i=>{
     const p = products.find(x=>x.id===i.id);
