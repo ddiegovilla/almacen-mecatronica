@@ -678,11 +678,104 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <!-- Inventory panel -->
     <div class="admin-panel" id="panel-inventory">
-      <div class="table-controls">
-        <span style="font-size:13px;color:var(--muted)">Gestión de inventario</span>
-        <button class="btn-sm btn-edit" onclick="saveInventory()" style="padding:8px 18px">💾 Guardar cambios</button>
+
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)">
+        <button class="admin-tab active" id="itab-stock"   onclick="showInvTab('stock')"  style="font-size:12px">📦 Stock actual</button>
+        <button class="admin-tab"        id="itab-add"     onclick="showInvTab('add')"    style="font-size:12px">➕ Agregar producto</button>
+        <button class="admin-tab"        id="itab-combos"  onclick="showInvTab('combos')" style="font-size:12px">⚡ Gestionar combos</button>
       </div>
-      <div class="inventory-grid" id="inventory-grid"></div>
+
+      <!-- STOCK SUB-PANEL -->
+      <div id="isub-stock">
+        <div class="table-controls" style="margin-bottom:16px">
+          <span style="font-size:13px;color:var(--muted)">Edita cantidades y guarda cambios</span>
+          <button class="btn-sm btn-edit" onclick="saveInventory()" style="padding:8px 18px">💾 Guardar cambios</button>
+        </div>
+        <div class="inventory-grid" id="inventory-grid"></div>
+      </div>
+
+      <!-- ADD PRODUCT SUB-PANEL -->
+      <div id="isub-add" style="display:none;max-width:560px">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Agrega un nuevo artículo al almacén. Aparecerá de inmediato en la tienda para los alumnos.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Nombre del artículo</label>
+            <input type="text" id="new-prod-name" placeholder="Ej. Pinzas de pico">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Categoría</label>
+            <input type="text" id="new-prod-cat" placeholder="Ej. Mecánica" list="cat-list">
+            <datalist id="cat-list"></datalist>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Cantidad total</label>
+            <input type="number" id="new-prod-qty" placeholder="Ej. 5" min="1">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Emoji / ícono</label>
+            <input type="text" id="new-prod-emoji" placeholder="Ej. 🔧" maxlength="4">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;margin-bottom:0">
+            <label>URL de imagen (opcional)</label>
+            <input type="url" id="new-prod-img" placeholder="https://... o deja vacío para usar solo emoji">
+          </div>
+        </div>
+        <div id="new-prod-preview" style="display:none;margin:16px 0;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;align-items:center;gap:14px">
+          <div id="preview-img" style="width:64px;height:64px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden"></div>
+          <div>
+            <div id="preview-name" style="font-weight:700;font-size:15px"></div>
+            <div id="preview-cat" style="font-size:12px;color:var(--muted)"></div>
+            <div id="preview-qty" style="font-size:12px;color:var(--accent);margin-top:4px"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn btn-ghost" style="width:auto;padding:10px 20px" onclick="previewProduct()">👁️ Previsualizar</button>
+          <button class="btn btn-primary" style="width:auto;padding:10px 24px" onclick="addNewProduct()">✓ Agregar al inventario</button>
+        </div>
+        <div id="new-prod-error" class="error-msg" style="margin-top:10px"></div>
+      </div>
+
+      <!-- COMBOS SUB-PANEL -->
+      <div id="isub-combos" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+          <!-- Left: existing combos -->
+          <div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">Combos existentes</div>
+            <div id="admin-combos-list"></div>
+          </div>
+
+          <!-- Right: create new combo -->
+          <div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">Crear nuevo combo</div>
+            <div class="form-group">
+              <label>Nombre del combo</label>
+              <input type="text" id="new-combo-name" placeholder="Ej. Kit Electrónica">
+            </div>
+            <div class="form-group">
+              <label>Descripción corta</label>
+              <input type="text" id="new-combo-desc" placeholder="Ej. Todo para circuitos">
+            </div>
+            <div class="form-group">
+              <label>Emoji del combo</label>
+              <input type="text" id="new-combo-emoji" placeholder="Ej. ⚡" maxlength="4">
+            </div>
+            <div class="form-group">
+              <label>Artículos del combo</label>
+              <input class="picker-search" id="combo-picker-search" placeholder="🔍 Buscar artículo..." oninput="renderComboPicker(this.value)" style="margin-bottom:8px;width:100%">
+              <div id="combo-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;max-height:220px;overflow-y:auto;padding:4px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3)"></div>
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">Seleccionados:</div>
+              <div id="new-combo-selected" style="display:flex;flex-wrap:wrap;gap:5px;min-height:32px"></div>
+            </div>
+            <button class="btn btn-primary" style="width:auto;padding:10px 24px" onclick="saveNewCombo()">✓ Guardar combo</button>
+            <div id="new-combo-error" class="error-msg" style="margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <!-- Users panel -->
     <div class="admin-panel" id="panel-users">
@@ -827,7 +920,7 @@ const INITIAL_PRODUCTS = [
   {id:'p58',name:'Endmill',cat:'Maquinados',qty:5,emoji:'⚙️',bg:'#1a0a2a'},
 ];
 
-const COMBOS = [
+const INITIAL_COMBOS = [
   {id:'c1',name:'Kit Taladrado',emoji:'🔨',desc:'Todo para perforar y taladrar',items:['p12','p14','p09','p17','p18']},
   {id:'c2',name:'Kit Soldadura',emoji:'🔥',desc:'Estación completa de soldadura',items:['p19','p20','p21','p22','p23']},
   {id:'c3',name:'Instrumentos A',emoji:'⚡',desc:'Fuente de poder con cables',items:['p24','p25','p26']},
@@ -842,6 +935,7 @@ const COMBOS = [
 // STATE  (in-memory cache of Firestore data)
 // ============================================================
 let products  = [];
+let combos    = [];
 let users     = [];
 let loans     = [];
 let currentUser = JSON.parse(localStorage.getItem('lm_current') || 'null');
@@ -894,6 +988,20 @@ async function loadProducts(){
     products = INITIAL_PRODUCTS.map(p=>({...p, available:p.qty}));
   } else {
     products = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }
+}
+
+async function loadCombos(){
+  const snap = await db.collection('combos').get();
+  if(snap.empty){
+    const batch = db.batch();
+    INITIAL_COMBOS.forEach(c=>{
+      batch.set(db.collection('combos').doc(c.id), c);
+    });
+    await batch.commit();
+    combos = [...INITIAL_COMBOS];
+  } else {
+    combos = snap.docs.map(d=>({id:d.id,...d.data()}));
   }
 }
 
@@ -998,7 +1106,7 @@ function initStore(){
 
 function renderCombos(){
   const c = document.getElementById('combos-container');
-  c.innerHTML = COMBOS.map(combo=>{
+  c.innerHTML = combos.map(combo=>{
     const itemsData = combo.items.map(id=>products.find(x=>x.id===id)).filter(Boolean);
     const someUnavail = itemsData.some(p=>p.available===0);
     const allOut = itemsData.every(p=>p.available===0);
@@ -1020,7 +1128,7 @@ function renderCombos(){
 }
 
 function addCombo(comboId){
-  const combo = COMBOS.find(c=>c.id===comboId);
+  const combo = combos.find(c=>c.id===comboId);
   if(!combo){ showToast('Combo no encontrado','error'); return; }
   let added = 0;
   combo.items.forEach(pid=>{
@@ -1323,12 +1431,37 @@ function renderHistoryTable(search=''){
   </tr>`).join('');
 }
 
+function showInvTab(tab){
+  ['stock','add','combos'].forEach(t=>{
+    document.getElementById('itab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('isub-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  if(tab==='combos'){
+    renderAdminCombosList();
+    renderComboPicker('');
+    newComboItems=[];
+    renderNewComboSelected();
+  }
+  if(tab==='add'){
+    // Populate category datalist
+    const dl = document.getElementById('cat-list');
+    const cats = [...new Set(products.map(p=>p.cat))];
+    dl.innerHTML = cats.map(c=>`<option value="${c}">`).join('');
+    document.getElementById('new-prod-preview').style.display='none';
+  }
+}
+
 function renderInventoryGrid(){
   const grid = document.getElementById('inventory-grid');
   grid.innerHTML = products.map(p=>{
     const cls = p.available===0?'out':p.available<=2?'low':'ok';
+    const imgHtml = p.img
+      ? `<img src="${p.img}" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.style.display='none';this.nextSibling.style.display='flex'">`
+      : '';
     return `<div class="inv-card">
-      <div class="inv-icon">${p.emoji}</div>
+      <div class="inv-icon" style="${p.img?'font-size:0;padding:0;overflow:hidden':''}">
+        ${imgHtml}${p.emoji}
+      </div>
       <div class="inv-info">
         <div class="inv-name">${p.name}</div>
         <div class="inv-cat">${p.cat}</div>
@@ -1336,7 +1469,7 @@ function renderInventoryGrid(){
           <input class="inv-qty-input" type="number" min="0" value="${p.qty}" data-id="${p.id}">
           <span class="inv-total">total</span>
         </div>
-        <div class="inv-avail ${cls}">Disponibles: ${p.available}</div>
+        <div class="inv-avail ${cls}">Disp: ${p.available}</div>
       </div>
     </div>`;
   }).join('');
@@ -1519,6 +1652,166 @@ async function confirmAdminLoan(){
 }
 
 // ============================================================
+// ADD NEW PRODUCT
+// ============================================================
+function previewProduct(){
+  const name  = document.getElementById('new-prod-name').value.trim();
+  const cat   = document.getElementById('new-prod-cat').value.trim();
+  const qty   = parseInt(document.getElementById('new-prod-qty').value)||0;
+  const emoji = document.getElementById('new-prod-emoji').value.trim()||'📦';
+  const img   = document.getElementById('new-prod-img').value.trim();
+  if(!name||!cat||!qty){
+    document.getElementById('new-prod-error').textContent='Completa nombre, categoría y cantidad';
+    document.getElementById('new-prod-error').style.display='block';
+    return;
+  }
+  document.getElementById('new-prod-error').style.display='none';
+  const prev = document.getElementById('new-prod-preview');
+  prev.style.display='flex';
+  const imgEl = document.getElementById('preview-img');
+  if(img){
+    imgEl.innerHTML=`<img src="${img}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${emoji}'">`;
+  } else {
+    imgEl.textContent=emoji;
+  }
+  document.getElementById('preview-name').textContent=name;
+  document.getElementById('preview-cat').textContent=cat;
+  document.getElementById('preview-qty').textContent=qty+' unidades disponibles';
+}
+
+async function addNewProduct(){
+  const name  = document.getElementById('new-prod-name').value.trim();
+  const cat   = document.getElementById('new-prod-cat').value.trim();
+  const qty   = parseInt(document.getElementById('new-prod-qty').value)||0;
+  const emoji = document.getElementById('new-prod-emoji').value.trim()||'📦';
+  const img   = document.getElementById('new-prod-img').value.trim();
+  const errEl = document.getElementById('new-prod-error');
+  if(!name||!cat||qty<1){
+    errEl.textContent='Completa nombre, categoría y cantidad (mínimo 1)';
+    errEl.style.display='block'; return;
+  }
+  errEl.style.display='none';
+  showLoader('Agregando producto...');
+  const newId = 'p'+Date.now();
+  // Pick a bg color based on category hash
+  const bgColors=['#1a2a3a','#1a2a1a','#2a1a1a','#1a1a2a','#2a1a0a','#0a1a2a','#0a2a1a','#1a0a2a','#2a2a0a','#0a2a2a','#2a0a1a','#1a0a2a'];
+  const bg = bgColors[Math.abs(cat.split('').reduce((a,c)=>a+c.charCodeAt(0),0))%bgColors.length];
+  const newProduct = {id:newId, name, cat, qty, available:qty, emoji, bg, ...(img&&{img})};
+  await db.collection('products').doc(newId).set(newProduct);
+  products.push(newProduct);
+  hideLoader();
+  // Reset form
+  ['new-prod-name','new-prod-cat','new-prod-qty','new-prod-emoji','new-prod-img'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('new-prod-preview').style.display='none';
+  renderInventoryGrid();
+  renderAdminStats();
+  renderCategoryFilters();
+  renderProducts(activeCategory);
+  showToast(`✅ "${name}" agregado al inventario`,'success');
+}
+
+// ============================================================
+// COMBO MANAGEMENT
+// ============================================================
+let newComboItems = [];
+
+function renderAdminCombosList(){
+  const el = document.getElementById('admin-combos-list');
+  if(!el) return;
+  if(combos.length===0){el.innerHTML='<p style="color:var(--muted);font-size:13px">No hay combos aún</p>';return;}
+  el.innerHTML = combos.map(c=>{
+    const names = c.items.map(id=>{const p=products.find(x=>x.id===id);return p?p.name:'?'}).join(', ');
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:22px">${c.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${c.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${c.desc}</div>
+        </div>
+        <button class="btn-sm" onclick="deleteCombo('${c.id}')" style="background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.25);color:var(--danger);padding:4px 10px;font-size:11px">🗑️ Eliminar</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${c.items.map(id=>{const p=products.find(x=>x.id===id);return p?`<span style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:11px">${p.emoji} ${p.name}</span>`:'';}).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteCombo(comboId){
+  if(!confirm('¿Eliminar este combo?')) return;
+  showLoader('Eliminando combo...');
+  await db.collection('combos').doc(comboId).delete();
+  combos = combos.filter(c=>c.id!==comboId);
+  hideLoader();
+  renderAdminCombosList();
+  renderCombos();
+  showToast('🗑️ Combo eliminado','info');
+}
+
+function renderComboPicker(search){
+  const el = document.getElementById('combo-picker');
+  if(!el) return;
+  const filtered = search ? products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())) : products;
+  el.innerHTML = filtered.map(p=>{
+    const sel = newComboItems.includes(p.id);
+    return `<div onclick="toggleComboItem('${p.id}')" style="padding:7px 8px;border-radius:6px;border:1px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'rgba(0,194,255,.1)':'transparent'};cursor:pointer;transition:all .2s;font-size:11px;display:flex;align-items:center;gap:5px">
+      <span style="font-size:16px">${p.emoji}</span>
+      <span style="${sel?'color:var(--accent);font-weight:700':'color:var(--text)'}">${p.name}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleComboItem(id){
+  const idx = newComboItems.indexOf(id);
+  if(idx>-1) newComboItems.splice(idx,1);
+  else newComboItems.push(id);
+  renderComboPicker(document.getElementById('combo-picker-search').value);
+  renderNewComboSelected();
+}
+
+function renderNewComboSelected(){
+  const el = document.getElementById('new-combo-selected');
+  if(!el) return;
+  if(newComboItems.length===0){el.innerHTML='<span style="color:var(--muted);font-size:12px">Ninguno seleccionado</span>';return;}
+  el.innerHTML = newComboItems.map(id=>{
+    const p = products.find(x=>x.id===id);
+    if(!p) return '';
+    return `<span style="display:flex;align-items:center;gap:4px;background:rgba(0,194,255,.1);border:1px solid rgba(0,194,255,.2);border-radius:6px;padding:3px 8px;font-size:11px">
+      ${p.emoji} ${p.name}
+      <button onclick="toggleComboItem('${id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding-left:3px">✕</button>
+    </span>`;
+  }).join('');
+}
+
+async function saveNewCombo(){
+  const name  = document.getElementById('new-combo-name').value.trim();
+  const desc  = document.getElementById('new-combo-desc').value.trim();
+  const emoji = document.getElementById('new-combo-emoji').value.trim()||'📦';
+  const errEl = document.getElementById('new-combo-error');
+  if(!name||newComboItems.length<2){
+    errEl.textContent='Ponle nombre y selecciona al menos 2 artículos';
+    errEl.style.display='block'; return;
+  }
+  errEl.style.display='none';
+  showLoader('Guardando combo...');
+  const newId = 'c'+Date.now();
+  const newCombo = {id:newId, name, desc:desc||name, emoji, items:[...newComboItems]};
+  await db.collection('combos').doc(newId).set(newCombo);
+  combos.push(newCombo);
+  hideLoader();
+  // Reset
+  ['new-combo-name','new-combo-desc','new-combo-emoji'].forEach(id=>document.getElementById(id).value='');
+  newComboItems=[];
+  renderNewComboSelected();
+  renderComboPicker('');
+  renderAdminCombosList();
+  renderCombos();
+  showToast(`✅ Combo "${name}" creado`,'success');
+}
+
+// ============================================================
 // EXPORT TO EXCEL
 // ============================================================
 function exportToExcel(){
@@ -1549,6 +1842,7 @@ async function appInit(){
   showLoader('Conectando con Firebase...');
   try {
     await loadProducts();
+    await loadCombos();
     if(isAdmin){
       await loadLoans(); await loadUsers();
       hideLoader(); initAdmin(); showView('admin');
